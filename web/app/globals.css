@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 亮色 token（HSL） */
+    --background: 0 0% 100%;            /* white */
+    --foreground: 210 14% 17%;          /* dark charcoal */
+    --primary: 210 14% 17%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 184 5% 55%;
+    --accent: 239 84% 67%;              /* indigo/blue */
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --ring: 239 84% 67%;
+    --radius: 0.5rem;
+    --card: 0 0% 100%;              /* 实体卡片背景 */
+
+    /* 字体 token */
+    /* 字体由 next/font 注入 CSS 变量 --font-body / --font-display */
+
+    /* 仪表盘阴影：用于产品预览和实体卡片 */
+    --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+
+    /* 9 状态机语义色（产品面/营销面共享） */
+    --status-applied: 217 91% 60%;      /* 蓝 */
+    --status-screening: 262 83% 58%;    /* 紫 */
+    --status-testing: 32 95% 56%;       /* 橙 */
+    --status-interview: 142 71% 45%;    /* 绿 */
+    --status-offer: 142 71% 45%;        /* 绿 */
+    --status-declined: 0 84% 60%;       /* 红 */
+    --status-no-response: 0 0% 64%;     /* 灰 */
+    --status-withdrawn: 0 0% 52%;       /* 深灰 */
+  }
+
+  .dark {
+    /* 暗色 token —— 基于亮色推导 + 手动调对比度 */
+    --background: 210 20% 8%;           /* 近黑深灰，非纯黑避免发灰 */
+    --foreground: 210 20% 92%;          /* 高对比浅灰白文字 */
+    --primary: 0 0% 98%;                /* 暗色下 primary 反转为浅，按钮白底黑字 */
+    --primary-foreground: 210 20% 8%;
+    --secondary: 210 16% 14%;           /* 卡片/次级背景 */
+    --secondary-foreground: 210 20% 92%;
+    --muted: 210 16% 14%;
+    --muted-foreground: 215 16% 65%;    /* 暗色下次要文字要更亮保证可读 */
+    --accent: 239 84% 70%;              /* 暗色下 accent 提亮一档保证可见性 */
+    --accent-foreground: 0 0% 100%;
+    --border: 215 16% 22%;              /* 暗色下 border 要可见但克制 */
+    --ring: 239 84% 70%;
+    --card: 210 16% 11%;             /* 暗色实体卡片略亮于背景 */
+
+    /* 暗色阴影：深背景上阴影要更深才有效果 */
+    --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    /* 暗色下状态色提亮（饱和度略降避免刺眼） */
+    --status-applied: 217 91% 65%;
+    --status-screening: 262 83% 65%;
+    --status-testing: 32 95% 60%;
+    --status-interview: 142 71% 52%;
+    --status-offer: 142 71% 52%;
+    --status-declined: 0 84% 65%;
+    --status-no-response: 0 0% 58%;
+    --status-withdrawn: 0 0% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* 图表曲线绘制动画 —— dashboard 动态演示用 */
+@layer utilities {
+  @keyframes draw-curve {
+    from {
+      stroke-dashoffset: 400;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .animate-draw-curve {
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: draw-curve 2s ease-out 0.8s forwards;
+  }
+  @keyframes fill-area {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .animate-fill-area {
+    opacity: 0;
+    animation: fill-area 1.2s ease-out 1.8s forwards;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

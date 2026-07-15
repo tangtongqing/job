@@ -1,0 +1,22 @@
+# 采集源配置（crawler-module.md §三 + 返工任务 §4）
+# 高风险来源默认 enabled: false
+
+global:
+  crawl_interval_minutes: 60
+  max_concurrent: 2
+  batch_size: 20
+  manual_robots_override: false  # 人工 robots override，默认关闭
+
+sources:
+  company_website:
+    enabled: true            # 合规风险低，默认开
+    adapter: company
+    base_urls: []            # 实际使用时填入企业官网 URL
+
+  boss:
+    enabled: false           # 高风险，默认关
+    adapter: boss
+
+  nowcoder:
+    enabled: false           # 高风险，默认关
+    adapter: nowcoder
