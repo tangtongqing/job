@@ -1,84 +1,77 @@
-# 招聘信息搜集系统（JobPulse · 项目代号）
+# JobPulse
 
-> 面向大学生的招聘信息聚合 + 投递管理工具。
-> 本项目同时作为**产品经理求职作品集**支撑，目标是讲完整的产品故事，而非生产级 SaaS。
+JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位、收藏决策、投递状态和近期安排收进同一个求职工作台。
 
----
+项目包含三个彼此独立的界面：
 
-## 📌 项目定位（一句话）
+- `/`：面向真实用户的 SaaS 官网，含真实产品录屏。
+- `/dashboard`：可完整操作的产品 Demo。
+- `/case-study`：面向作品集阅读者的产品设计案例。
 
-把分散在各大招聘平台、企业官网的校招/实习信息**统一采集、去重、结构化**，并帮助求职者**追踪每一次投递的全过程**，用数据看板掌握求职节奏。
+## 当前可演示闭环
 
-## 🎯 核心价值主张
+`发现岗位 → 收藏 / 待投递 → 创建投递 → 更新状态 → 近期安排 → 看板复盘`
 
-- **信息统一**：告别在 BOSS / 拉勾 / 牛客 / 实习僧 / 企业官网之间来回切换
-- **实时更新**：每日定时采集，不错过新发布的岗位
-- **投递闭环**：从「收藏 → 投递 → 笔试 → 面试 → Offer / 拒绝」全状态管理
-- **数据驱动**：用看板看清自己的求职节奏与转化
+同时支持：岗位订阅 CRUD、事件时间线、AI 邮件解析建议（用户确认后才更新）、数据采集管理，以及一键恢复确定性的 Demo 数据。
 
-## 🗂 MVP 功能范围（按依赖顺序）
+## 本地启动
 
-1. **数据采集与展示** — 多源采集 → 清洗去重 → 结构化展示（列表 / 详情 / 筛选 / 搜索）
-2. **看板统计** — 今日新增、收录总数、投递统计、近 7 天趋势、分布维度
-3. **投递管理** — 投递状态机、时间线、跟进提醒
-4. **个性化订阅** — 关键词 / 公司 / 地点订阅，新岗位推送
+要求 Python 3.10+ 与 Node.js 18+。
 
-## 🛠 技术栈
-
-| 层 | 选型 | 理由 |
-|----|------|------|
-| 后端 | **Python + FastAPI** | 采集生态最强；FastAPI 自带 OpenAPI 文档，演示加分 |
-| 前端 | **Next.js + TypeScript + Tailwind + shadcn/ui** | 仪表盘级 UI 快速成型；Vercel 一键部署 |
-| 采集 | **Playwright + httpx + APScheduler** | 兼顾动态渲染与轻量请求 + 定时调度 |
-| 数据 | **SQLite（Demo）→ PostgreSQL（生产可选）** | 零配置起步，平滑迁移 |
-
-## 📐 项目结构
-
-```
-招聘信息搜集系统/
-├── .agent-ops/                 # 双智能体协作（Codex ↔ Mimo）
-│   ├── mimo/
-│   │   ├── inbox/              # Codex 写任务简报
-│   │   ├── outbox/             # Mimo 写执行结果
-│   │   └── archive/            # 已完成任务归档
-│   └── COLLABORATING_AGENT_WORKFLOW.md
-├── docs/
-│   ├── product/                # 愿景/Lean Canvas/PRD/画像/用户故事/优先级
-│   ├── design/                 # PRODUCT.md / DESIGN.md / shape 简报（impeccable）
-│   ├── research/               # 竞品、市场、数据源调研
-│   └── architecture/           # 架构、数据模型、API 契约、投递状态机
-├── config/                     # 采集源配置、调度配置、环境配置
-├── data/                       # 本地开发数据库
-├── src/
-│   ├── crawler/                # 采集模块（adapter + 调度 + 清洗去重）
-│   ├── api/                    # FastAPI 后端
-│   ├── web/                    # Next.js 前端
-│   └── shared/                 # 公共类型、常量、工具
-├── tests/                      # 单元 / 集成 / E2E
-├── scripts/                    # 一次性脚本（初始化、迁移、数据导入）
-└── README.md
+```bash
+python -m pip install -e ".[dev]"
+python -m src.db.init_db
+python -m uvicorn src.main:app --reload
 ```
 
-## 🔄 产品设计工作流（6 阶段）
+另开终端：
 
-| 阶段 | 产出 | 负责方 |
-|------|------|--------|
-| 0. 对齐立项 | 项目定位、结构、技术栈 | ✅ 已完成 |
-| 1. 产品定义 | 市场分析、画像、痛点、PRD、用户故事 | Codex 主导 + Mimo 调研 |
-| 2. 架构设计 | 采集架构、数据模型、API、状态机 | Codex（触发安全门禁） |
-| 3. 设计 | PRODUCT.md / DESIGN.md / 高保真页面 | impeccable (shape → craft) |
-| 4. 实现Demo | 采集器 + API + 前端核心页面 | Mimo 执行 + Codex 验收 |
-| 5. 质量收口 | critique / audit / 测试 / 文档 | Codex |
-| 6. 作品集包装 | 演示话术、项目复盘 | Codex |
+```bash
+cd web
+npm install
+npm run dev
+```
 
-## 📖 协作说明
+打开：
 
-- **Codex（主智能体，本对话）**：负责策略、需求、设计简报、任务委派与验收
-- **Mimo Code（执行智能体）**：读取 `.agent-ops/mimo/inbox/` 任务简报，在授权范围内实现，结果写入 `outbox/`
-- 后续如引入更高级智能体，Codex 角色降级为执行/协助，由新智能体接管策略
+- 官网：[http://localhost:3000](http://localhost:3000)
+- 产品 Demo：[http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- 案例页：[http://localhost:3000/case-study](http://localhost:3000/case-study)
+- API 文档：[http://localhost:8000/docs](http://localhost:8000/docs)
 
-详细规范见 `.agent-ops/COLLABORATING_AGENT_WORKFLOW.md`。
+产品侧栏的“重置演示数据”需要连续点击两次确认。部署到非演示环境时，在 `.env` 中设置：
 
-## ⚠️ 合规声明
+```env
+DEMO_RESET_ENABLED=false
+```
 
-本项目采集行为仅用于个人学习与作品集演示。正式采集方案需在第 2 阶段评估各平台 `robots.txt`、服务条款与数据合规边界；Demo 阶段以**公开页面 + 低频请求 + 少量数据**为主，不做商业用途。
+## 验证
+
+```bash
+python -m pytest -q
+cd web
+npm run lint
+npm run build
+```
+
+当前基线：99 项后端测试通过，14 个 Next.js 路由完成生产构建。
+
+## 技术栈
+
+- 后端：FastAPI、SQLAlchemy、Pydantic、SQLite（可演进 PostgreSQL）
+- 前端：Next.js 14、TypeScript、Tailwind CSS、Framer Motion、Lucide
+- 数据采集：httpx、Playwright、APScheduler
+- 演示视频：Playwright 自动操作真实产品并录制 WebM
+
+## 关键设计约束
+
+- 收藏与待投递是两种不同意图；创建投递后自动结束待投递标记。
+- 投递状态变化同时写入事件，支持时间线、漏斗、待办与纠错。
+- AI 解析只给建议，不自动改变投递状态。
+- 官网不展示虚构用户数、收入、转化、客户 Logo 或付费权益。
+
+设计基线见 [`docs/design/REDESIGN-BRIEF.md`](docs/design/REDESIGN-BRIEF.md)，API 契约见 [`docs/architecture/api-contract.md`](docs/architecture/api-contract.md)。
+
+## 合规边界
+
+当前数据用于本地 Demo 与作品集展示。真实采集必须遵守目标站点的 robots.txt、服务条款与频率限制；长期使用、通知、账号同步与商业化仍属于后续验证范围。

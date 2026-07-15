@@ -9,7 +9,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.responses import APIError, api_error_handler, validation_error_handler
-from src.api.routes.app import jobs, applications, dashboard, todo, crawler
+from src.api.routes.app import (
+    jobs,
+    applications,
+    dashboard,
+    todo,
+    crawler,
+    user_actions,
+    subscriptions,
+    demo,
+)
 
 app = FastAPI(
     title="JobPulse API",
@@ -20,7 +29,12 @@ app = FastAPI(
 # CORS（前端 web/ 跑在 3000 端口）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3100",
+        "http://127.0.0.1:3100",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +60,9 @@ app.include_router(applications.router, prefix=api_v1_prefix)
 app.include_router(dashboard.router, prefix=api_v1_prefix)
 app.include_router(todo.router, prefix=api_v1_prefix)
 app.include_router(crawler.router, prefix=api_v1_prefix)
+app.include_router(user_actions.router, prefix=api_v1_prefix)
+app.include_router(subscriptions.router, prefix=api_v1_prefix)
+app.include_router(demo.router, prefix=api_v1_prefix)
 
 
 @app.get("/")

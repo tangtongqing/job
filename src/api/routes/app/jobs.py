@@ -9,14 +9,20 @@ GET    /jobs/stats      采集统计
 from datetime import datetime
 from typing import Callable
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.db.session import get_db
-from src.db.models import Job, JOB_STATUS_DISPLAYING
-from src.schemas.models import JobOut, JobCreate, MessageOut
-from src.api.responses import make_paginated, NotFoundError
+from src.db.models import (
+    Job,
+    UserJobAction,
+    ACTION_FAVORITED,
+    ACTION_TO_APPLY,
+    JOB_STATUS_DISPLAYING,
+)
+from src.schemas.models import JobOut, JobCreate, UserJobActionOut
+from src.api.responses import make_paginated, NotFoundError, ConflictError
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -163,3 +169,63 @@ def verify_job_endpoint(job_id: int, db: Session = Depends(get_db)):
 
     job = verify_job(db, job_id, fetcher=_verify_fetcher_override)
     return {"data": JobOut.model_validate(job).model_dump()}
+
+
+def _create_job_action(job_id: int, action_type: str, db: Session):
+    if not db.get(Job, job_id):
+        raise NotFoundError(f"Job {job_id} not found")
+
+    existing = db.scalar(
+        select(UserJobAction).where(
+            UserJobAction.job_id == job_id,
+            UserJobAction.action_type == action_type,
+            UserJobAction.ended_at.is_(None),
+        )
+    )
+    if existing:
+        raise ConflictError(f"Job {job_id} 已存在该标记")
+
+    action = UserJobAction(job_id=job_id, action_type=action_type)
+    db.add(action)
+    db.commit()
+    db.refresh(action)
+    return {"data": UserJobActionOut.model_validate(action).model_dump()}
+
+
+def _end_job_action(job_id: int, action_type: str, db: Session) -> None:
+    action = db.scalar(
+        select(UserJobAction).where(
+            UserJobAction.job_id == job_id,
+            UserJobAction.action_type == action_type,
+            UserJobAction.ended_at.is_(None),
+        )
+    )
+    if action:
+        action.ended_at = datetime.utcnow()
+        db.commit()
+
+
+@router.post("/{job_id}/favorite", status_code=201)
+def favorite_job(job_id: int, db: Session = Depends(get_db)):
+    """收藏岗位。相同岗位的活跃收藏不可重复创建。"""
+    return _create_job_action(job_id, ACTION_FAVORITED, db)
+
+
+@router.delete("/{job_id}/favorite", status_code=204)
+def unfavorite_job(job_id: int, db: Session = Depends(get_db)):
+    """取消收藏；重复取消保持幂等。"""
+    _end_job_action(job_id, ACTION_FAVORITED, db)
+    return Response(status_code=204)
+
+
+@router.post("/{job_id}/to-apply", status_code=201)
+def mark_job_to_apply(job_id: int, db: Session = Depends(get_db)):
+    """将岗位加入待投递。"""
+    return _create_job_action(job_id, ACTION_TO_APPLY, db)
+
+
+@router.delete("/{job_id}/to-apply", status_code=204)
+def remove_job_to_apply(job_id: int, db: Session = Depends(get_db)):
+    """移出待投递；用于收藏中心的显式撤销操作。"""
+    _end_job_action(job_id, ACTION_TO_APPLY, db)
+    return Response(status_code=204)

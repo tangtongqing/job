@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # 业务阈值
     no_response_days: int = 14
+    demo_reset_enabled: bool = True
 
     # 日志
     log_level: str = "INFO"

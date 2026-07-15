@@ -18,6 +18,8 @@ from src.db.models import (
     Application,
     ApplicationEvent,
     Job,
+    UserJobAction,
+    ACTION_TO_APPLY,
     APP_APPLIED,
     TERMINAL_STATUSES,
     EVT_STATUS_CHANGE,
@@ -125,6 +127,18 @@ def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)
         is_correction=False,
     )
     db.add(event)
+
+    # 创建真实投递后，待投递标记结束；收藏状态保持不变。
+    pending_actions = db.scalars(
+        select(UserJobAction).where(
+            UserJobAction.job_id == payload.job_id,
+            UserJobAction.action_type == ACTION_TO_APPLY,
+            UserJobAction.ended_at.is_(None),
+        )
+    ).all()
+    for action in pending_actions:
+        action.ended_at = now
+
     db.commit()
     db.refresh(app)
     return {"data": ApplicationOut.model_validate(app).model_dump()}

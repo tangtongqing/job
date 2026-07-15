@@ -183,6 +183,28 @@ export interface CrawlLog {
   finished_at: string | null;
 }
 
+export interface SavedJob {
+  id: number;
+  job_id: number;
+  action_type: "favorited" | "to_apply";
+  job: Job;
+  created_at: string;
+}
+
+export interface Subscription {
+  id: number;
+  keyword: string | null;
+  company: string | null;
+  location: string | null;
+  created_at: string;
+}
+
+export interface SubscriptionPayload {
+  keyword?: string | null;
+  company?: string | null;
+  location?: string | null;
+}
+
 // ---------- API 方法 ----------
 
 export const api = {
@@ -216,6 +238,22 @@ export const api = {
       "/jobs/stats"
     ),
   verifyJob: (id: number) => request<Job>(`/jobs/${id}/verify`, { method: "POST" }),
+  favoriteJob: (id: number) =>
+    request<{ id: number; job_id: number; action_type: "favorited"; created_at: string }>(
+      `/jobs/${id}/favorite`,
+      { method: "POST" }
+    ),
+  unfavoriteJob: (id: number) =>
+    request<never>(`/jobs/${id}/favorite`, { method: "DELETE" }),
+  markToApply: (id: number) =>
+    request<{ id: number; job_id: number; action_type: "to_apply"; created_at: string }>(
+      `/jobs/${id}/to-apply`,
+      { method: "POST" }
+    ),
+  removeToApply: (id: number) =>
+    request<never>(`/jobs/${id}/to-apply`, { method: "DELETE" }),
+  getFavorites: () => request<SavedJob[]>("/user/favorites?page_size=100"),
+  getToApply: () => request<SavedJob[]>("/user/to-apply?page_size=100"),
 
   // Applications
   getApplications: (params: Record<string, unknown> = {}) => {
@@ -263,6 +301,31 @@ export const api = {
 
   // Todo
   getTodo: (days = 7) => request<Todo[]>(`/todo?days=${days}`),
+
+  // Subscriptions
+  getSubscriptions: () => request<Subscription[]>("/subscriptions?page_size=100"),
+  createSubscription: (payload: SubscriptionPayload) =>
+    request<Subscription>("/subscriptions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateSubscription: (id: number, payload: SubscriptionPayload) =>
+    request<Subscription>(`/subscriptions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteSubscription: (id: number) =>
+    request<never>(`/subscriptions/${id}`, { method: "DELETE" }),
+
+  // Demo
+  resetDemo: () =>
+    request<{
+      message: string;
+      jobs: number;
+      applications: number;
+      saved_jobs: number;
+      subscriptions: number;
+    }>("/demo/reset", { method: "POST" }),
 
   // Crawler
   triggerCrawl: (source?: string) =>

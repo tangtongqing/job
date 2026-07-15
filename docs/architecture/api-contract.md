@@ -849,6 +849,12 @@ POST /api/v1/applications/1/transition
 }
 ```
 
+#### DELETE /jobs/{id}/to-apply — 移出待投递
+
+**响应**：`204 No Content`。重复调用保持幂等。
+
+创建该岗位的投递记录后，系统也会自动结束活跃的 `to_apply` 标记；收藏状态不受影响。
+
 ---
 
 #### GET /user/favorites — 收藏列表
@@ -994,6 +1000,26 @@ POST /api/v1/applications/1/transition
 #### DELETE /subscriptions/{id} — 删除订阅
 
 **响应**：`204 No Content`
+
+---
+
+### 模块 F.1：演示环境（Demo）
+
+#### POST /demo/reset — 恢复完整演示场景
+
+创建缺失的数据库结构，清空产品数据并写入确定性的岗位、收藏/待投递、投递时间线、未来待办与订阅。生产或长期使用环境应通过 `DEMO_RESET_ENABLED=false` 关闭。
+
+```json
+{
+  "data": {
+    "message": "Demo 数据已重置",
+    "jobs": 8,
+    "applications": 5,
+    "saved_jobs": 4,
+    "subscriptions": 3
+  }
+}
+```
 
 ---
 

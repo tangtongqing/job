@@ -68,6 +68,11 @@ class ConflictError(APIError):
     code = "CONFLICT"
 
 
+class ForbiddenError(APIError):
+    status_code = 403
+    code = "FORBIDDEN"
+
+
 # ---------- 异常处理器（注册到 app）----------
 
 
@@ -87,13 +92,19 @@ async def validation_error_handler(
 
     对应 api-contract.md §2.4：VALIDATION_ERROR + HTTP 400。
     """
+    # Pydantic 的 ctx 可能包含 ValueError 实例，不能直接 JSON 序列化。
+    # 契约只需要可定位的 type/loc/msg/input，移除内部异常对象即可。
+    serializable_errors = [
+        {key: value for key, value in error.items() if key != "ctx"}
+        for error in exc.errors()
+    ]
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
             error=ErrorDetail(
                 code="VALIDATION_ERROR",
                 message="请求参数校验失败",
-                details={"errors": exc.errors()},
+                details={"errors": serializable_errors},
             )
         ).model_dump(),
     )

@@ -7,7 +7,7 @@ ORM 模型 → schema 用 from_attributes=True 转换。
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class ORMBase(BaseModel):
@@ -58,6 +58,55 @@ class JobCreate(BaseModel):
     deadline: datetime | None = None
     is_intern: bool = False
     is_fresh: bool = False
+
+
+# ---------- Saved jobs ----------
+
+
+class UserJobActionOut(ORMBase):
+    id: int
+    job_id: int
+    action_type: Literal["favorited", "to_apply"]
+    created_at: datetime
+
+
+class SavedJobOut(BaseModel):
+    id: int
+    job_id: int
+    action_type: Literal["favorited", "to_apply"]
+    job: JobOut
+    created_at: datetime
+
+
+# ---------- Subscription ----------
+
+
+class SubscriptionPayload(BaseModel):
+    keyword: str | None = None
+    company: str | None = None
+    location: str | None = None
+
+    @field_validator("keyword", "company", "location", mode="before")
+    @classmethod
+    def normalize_optional_text(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @model_validator(mode="after")
+    def require_at_least_one_filter(self):
+        if not any((self.keyword, self.company, self.location)):
+            raise ValueError("订阅至少需要一个关键词、公司或地点条件")
+        return self
+
+
+class SubscriptionOut(ORMBase):
+    id: int
+    keyword: str | None = None
+    company: str | None = None
+    location: str | None = None
+    created_at: datetime
 
 
 # ---------- Application ----------
