@@ -118,7 +118,7 @@ export default function JobsPage() {
                       <p className="mt-1 text-xs text-muted-foreground">{job.salary || "薪资面议"}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="inline-flex items-center gap-1 text-xs"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />{job.source}</p>
+                      <p className="inline-flex items-center gap-1 text-xs"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />{sourceLabel(job.source)}</p>
                       <p className="mt-1 text-[11px] text-muted-foreground">{relativeCollectedAt(job.collected_at)}</p>
                     </td>
                     <td className="px-5 py-4">
@@ -143,7 +143,7 @@ export default function JobsPage() {
                     <p className="mt-0.5 text-xs text-muted-foreground">{job.company} · {job.location || "地点待确认"}</p>
                     <p className="mt-2 text-xs">{job.salary || "薪资面议"}</p>
                   </div>
-                  <span className="rounded-full bg-[#f3f4f6] px-2 py-1 text-[10px] text-muted-foreground dark:bg-white/10">{job.source}</span>
+                  <span className="rounded-full bg-[#f3f4f6] px-2 py-1 text-[10px] text-muted-foreground dark:bg-white/10">{sourceLabel(job.source)}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 border-t border-black/[0.06] pt-3 dark:border-white/10">
                   <WorkflowButton label={favoriteIds.has(job.id) ? "已收藏" : "收藏"} active={favoriteIds.has(job.id)} busy={busyKey === `favorite-${job.id}`} icon={Bookmark} onClick={() => toggleFavorite(job)} />
@@ -201,4 +201,10 @@ function relativeCollectedAt(value: string | null) {
   if (hours < 1) return "刚刚更新";
   if (hours < 24) return `${hours} 小时前更新`;
   return `${Math.floor(hours / 24)} 天前更新`;
+}
+
+function sourceLabel(source: string) {
+  if (source === "demo_snapshot") return "演示快照";
+  if (source.startsWith("greenhouse_")) return `${source.replace("greenhouse_", "")} 公开 API`;
+  return source;
 }

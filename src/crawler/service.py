@@ -82,7 +82,11 @@ class CrawlService:
                     f"采集源已禁用: {source}",
                     details={"source": source, "enabled": False},
                 )
-            adapter_config = {**source_cfg.options, **adapter_kwargs.pop("config", {})}
+            adapter_config = {
+                "source_name": source_cfg.name,
+                **source_cfg.options,
+                **adapter_kwargs.pop("config", {}),
+            }
             adapter = create_adapter(
                 source_cfg.adapter,
                 config=adapter_config,
@@ -179,6 +183,10 @@ class CrawlService:
             graduation_year=data.get("graduation_year"),
             education=data.get("education"),
             experience=data.get("experience"),
+            published_at=data.get("published_at"),
+            deadline=data.get("deadline"),
+            is_intern=bool(data.get("is_intern", False)),
+            is_fresh=bool(data.get("is_fresh", False)),
             is_valid=True,
         )
 

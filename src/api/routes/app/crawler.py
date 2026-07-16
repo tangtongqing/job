@@ -99,3 +99,33 @@ def logs(
         page_size,
         total,
     )
+
+
+@router.get("/sources")
+def sources(db: Session = Depends(get_db)):
+    """Return configured source health without exposing internal credentials."""
+    service = _get_service()
+    result = []
+    for name, cfg in service.config.sources.items():
+        latest = db.scalar(
+            select(CrawlLog)
+            .where(CrawlLog.source == name)
+            .order_by(CrawlLog.started_at.desc())
+            .limit(1)
+        )
+        result.append(
+            {
+                "name": name,
+                "label": cfg.options.get("company") or name,
+                "adapter": cfg.adapter,
+                "enabled": cfg.enabled,
+                "kind": "public_api" if cfg.adapter == "greenhouse" else "website" if cfg.adapter == "company" else "restricted_platform",
+                "last_run": {
+                    "status": latest.status,
+                    "count": latest.count,
+                    "error": latest.error,
+                    "finished_at": latest.finished_at.isoformat() if latest.finished_at else None,
+                } if latest else None,
+            }
+        )
+    return {"data": result}

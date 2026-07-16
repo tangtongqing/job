@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, type Job } from "@/lib/api";
 import { Loading, ErrorState, useApi } from "@/components/app/shared";
-import { ExternalLink, Send } from "lucide-react";
+import { AlertTriangle, ExternalLink, Send } from "lucide-react";
 import { useToast } from "@/components/app/toast";
 
 export default function JobDetailPage() {
@@ -56,13 +56,20 @@ export default function JobDetailPage() {
       <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-card p-4 text-sm md:grid-cols-3">
         <InfoItem label="地点" value={job.location} />
         <InfoItem label="薪资" value={job.salary} />
-        <InfoItem label="来源" value={job.source} />
+        <InfoItem label="来源" value={sourceLabel(job.source)} />
         <InfoItem label="学历" value={job.education} />
         <InfoItem label="经验" value={job.experience} />
         <InfoItem label="毕业年份" value={job.graduation_year} />
         <InfoItem label="截止时间" value={job.deadline?.slice(0, 10)} />
         <InfoItem label="最后核验" value={job.last_verified_at?.slice(0, 10)} />
       </div>
+
+      {job.source === "demo_snapshot" && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          这是用于稳定演示的岗位快照，字段完整但不代表官方当前仍在招聘。请在企业官方页面确认最新状态。
+        </div>
+      )}
 
       {/* JD */}
       {job.jd && (
@@ -81,26 +88,26 @@ export default function JobDetailPage() {
       )}
 
       {/* 操作 */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleApply}
-          disabled={creating}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          <Send className="h-4 w-4" />
-          {creating ? "创建中..." : "创建投递"}
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
         {job.apply_url && (
           <a
             href={job.apply_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-4 py-2 text-sm text-foreground hover:bg-secondary"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <ExternalLink className="h-4 w-4" />
-            去官网投递
+            前往官方投递
           </a>
         )}
+        <button
+          onClick={handleApply}
+          disabled={creating}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border/60 px-4 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-50"
+        >
+          <Send className="h-4 w-4" />
+          {creating ? "创建中..." : "创建投递记录"}
+        </button>
       </div>
 
       {feedback && (
@@ -108,6 +115,12 @@ export default function JobDetailPage() {
       )}
     </div>
   );
+}
+
+function sourceLabel(source: string) {
+  if (source === "demo_snapshot") return "演示快照";
+  if (source.startsWith("greenhouse_")) return `${source.replace("greenhouse_", "")} · 公开 API`;
+  return source;
 }
 
 function InfoItem({ label, value }: { label: string; value: string | null | undefined }) {

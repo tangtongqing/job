@@ -122,12 +122,12 @@ def test_demo_reset_is_repeatable_and_restores_full_scenario(client):
     assert first.status_code == 200
     assert first.json()["data"] == {
         "message": "Demo 数据已重置",
-        "jobs": 8,
+        "jobs": 24,
         "applications": 5,
         "saved_jobs": 4,
         "subscriptions": 3,
     }
-    assert client.get("/api/v1/jobs?page_size=100").json()["meta"]["total"] == 8
+    assert client.get("/api/v1/jobs?page_size=100").json()["meta"]["total"] == 24
     assert client.get("/api/v1/user/favorites").json()["meta"]["total"] == 2
     assert client.get("/api/v1/user/to-apply").json()["meta"]["total"] == 2
 
@@ -157,6 +157,6 @@ def test_demo_reset_creates_schema_for_a_fresh_database():
     try:
         response = TestClient(app).post("/api/v1/demo/reset")
         assert response.status_code == 200
-        assert response.json()["data"]["jobs"] == 8
+        assert response.json()["data"]["jobs"] == 24
     finally:
         app.dependency_overrides.clear()

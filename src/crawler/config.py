@@ -7,6 +7,8 @@ the limited YAML subset used by that file and falls back to safe defaults.
 
 from __future__ import annotations
 
+import ast
+import json
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -47,14 +49,12 @@ class CrawlerConfig:
         return None
 
     def enabled_source_names(self) -> list[str]:
-        """Return enabled adapter names, de-duplicated and stable."""
-        names: list[str] = []
-        seen: set[str] = set()
-        for cfg in self.sources.values():
-            if cfg.enabled and cfg.adapter not in seen:
-                names.append(cfg.adapter)
-                seen.add(cfg.adapter)
-        return names
+        """Return enabled configured source keys in stable order.
+
+        Multiple companies may use the same adapter. Returning configuration
+        keys keeps their logs, limits and company metadata independent.
+        """
+        return [name for name, cfg in self.sources.items() if cfg.enabled]
 
 
 def _default_raw_config() -> dict[str, Any]:
@@ -67,7 +67,7 @@ def _default_raw_config() -> dict[str, Any]:
         },
         "sources": {
             "company_website": {
-                "enabled": True,
+                "enabled": False,
                 "adapter": "company",
                 "base_urls": [],
             },
@@ -85,6 +85,15 @@ def _parse_scalar(value: str) -> Any:
     value = value.strip()
     if value == "[]":
         return []
+    if value.startswith("[") and value.endswith("]"):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            try:
+                parsed = ast.literal_eval(value)
+                return parsed if isinstance(parsed, list) else value
+            except (ValueError, SyntaxError):
+                return value
     lowered = value.lower()
     if lowered == "true":
         return True
@@ -105,6 +114,7 @@ def _parse_sources_yaml(path: Path) -> dict[str, Any]:
     data: dict[str, Any] = {"global": {}, "sources": {}}
     section: str | None = None
     current_source: str | None = None
+    current_list_key: str | None = None
 
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = _strip_comment(raw_line)
@@ -117,6 +127,7 @@ def _parse_sources_yaml(path: Path) -> dict[str, Any]:
         if indent == 0 and text.endswith(":"):
             section = text[:-1]
             current_source = None
+            current_list_key = None
             continue
 
         if section == "global" and indent >= 2 and ":" in text:
@@ -128,10 +139,27 @@ def _parse_sources_yaml(path: Path) -> dict[str, Any]:
             if indent == 2 and text.endswith(":"):
                 current_source = text[:-1]
                 data["sources"].setdefault(current_source, {})
+                current_list_key = None
+                continue
+            if (
+                current_source
+                and current_list_key
+                and indent >= 6
+                and text.startswith("-")
+            ):
+                data["sources"][current_source][current_list_key].append(
+                    _parse_scalar(text[1:].strip())
+                )
                 continue
             if current_source and indent >= 4 and ":" in text:
                 key, value = text.split(":", 1)
-                data["sources"][current_source][key.strip()] = _parse_scalar(value)
+                key = key.strip()
+                if not value.strip():
+                    data["sources"][current_source][key] = []
+                    current_list_key = key
+                else:
+                    data["sources"][current_source][key] = _parse_scalar(value)
+                    current_list_key = None
 
     return data
 

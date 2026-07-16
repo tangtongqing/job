@@ -1,12 +1,12 @@
 /**
  * API Client —— 统一处理后端 {data, meta} / {error} envelope。
  *
- * Base URL 从 NEXT_PUBLIC_API_BASE_URL 读，缺省 http://localhost:8000/api/v1。
+ * Base URL 从 NEXT_PUBLIC_API_BASE_URL 读，本地缺省使用后端标准 8000 端口。
  * 页面在浏览器运行时请求；build 阶段不强依赖后端在线。
  */
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
 // ---------- 通用类型 ----------
 
@@ -183,6 +183,31 @@ export interface CrawlLog {
   finished_at: string | null;
 }
 
+export interface CrawlSource {
+  name: string;
+  label: string;
+  adapter: string;
+  enabled: boolean;
+  kind: "public_api" | "website" | "restricted_platform";
+  last_run: {
+    status: string;
+    count: number;
+    error: string | null;
+    finished_at: string | null;
+  } | null;
+}
+
+export interface JobStats {
+  today_new: number;
+  total: number;
+  valid: number;
+  invalid: number;
+  by_source: Record<string, number>;
+  demo_count: number;
+  live_count: number;
+  field_completeness: Record<string, { count: number; percentage: number }>;
+}
+
 export interface SavedJob {
   id: number;
   job_id: number;
@@ -233,10 +258,7 @@ export const api = {
     return request<Job[]>(`/jobs${qs ? "?" + qs : ""}`);
   },
   getJob: (id: number) => request<Job>(`/jobs/${id}`),
-  getJobStats: () =>
-    request<{ today_new: number; total: number; valid: number; invalid: number }>(
-      "/jobs/stats"
-    ),
+  getJobStats: () => request<JobStats>("/jobs/stats"),
   verifyJob: (id: number) => request<Job>(`/jobs/${id}/verify`, { method: "POST" }),
   favoriteJob: (id: number) =>
     request<{ id: number; job_id: number; action_type: "favorited"; created_at: string }>(
@@ -335,4 +357,5 @@ export const api = {
     ),
   getCrawlLogs: (page = 1, page_size = 20) =>
     request<CrawlLog[]>(`/crawler/logs?page=${page}&page_size=${page_size}`),
+  getCrawlSources: () => request<CrawlSource[]>("/crawler/sources"),
 };

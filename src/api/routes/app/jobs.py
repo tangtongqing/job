@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Callable
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from src.db.session import get_db
@@ -115,12 +115,48 @@ def job_stats(db: Session = Depends(get_db)):
     ).all()
     by_source = {src: cnt for src, cnt in rows}
 
+    completeness_fields = {
+        "jd": Job.jd,
+        "requirement": Job.requirement,
+        "apply_url": Job.apply_url,
+        "source_url": Job.source_url,
+        "education": Job.education,
+        "experience": Job.experience,
+        "last_verified_at": Job.last_verified_at,
+    }
+    expressions = [
+        func.sum(
+            case(
+                ((column.is_not(None)) & (func.trim(column) != ""), 1),
+                else_=0,
+            )
+        ).label(field)
+        if field != "last_verified_at"
+        else func.sum(case((column.is_not(None), 1), else_=0)).label(field)
+        for field, column in completeness_fields.items()
+    ]
+    completeness_row = db.execute(select(*expressions)).one()
+    field_completeness = {}
+    for field in completeness_fields:
+        count = int(getattr(completeness_row, field) or 0)
+        field_completeness[field] = {
+            "count": count,
+            "percentage": round((count / total) * 100) if total else 0,
+        }
+
+    demo_count = db.scalar(
+        select(func.count(Job.id)).where(Job.source == "demo_snapshot")
+    ) or 0
+
     return {"data": {
         "today_new": today_new,
         "total": total,
         "valid": valid,
         "invalid": invalid,
         "by_source": by_source,  # 额外字段
+        "demo_count": demo_count,
+        "live_count": max(0, total - demo_count),
+        "field_completeness": field_completeness,
     }}
 
 

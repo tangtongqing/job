@@ -118,7 +118,10 @@ def extract_education(raw: str | None) -> str | None:
 _EXP_PATTERNS = [
     (re.compile(r"(\d+)\s*[-~]\s*(\d+)\s*年"), "range"),
     (re.compile(r"(\d+)\s*\+?\s*年"), "min"),
+    (re.compile(r"(\d+)\s*[-–~]\s*(\d+)\s*years?", re.I), "range_en"),
+    (re.compile(r"(\d+)\s*\+?\s*years?", re.I), "min_en"),
     (re.compile(r"应届|不限|实习"), "any"),
+    (re.compile(r"entry[- ]level|new grad|internship", re.I), "any_en"),
 ]
 
 

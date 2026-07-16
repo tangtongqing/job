@@ -9,9 +9,45 @@ global:
 
 sources:
   company_website:
-    enabled: true            # 合规风险低，默认开
+    enabled: false           # 配置具体官网解析器后再开启
     adapter: company
     base_urls: []            # 实际使用时填入企业官网 URL
+
+  greenhouse_figma:
+    enabled: true
+    adapter: greenhouse
+    board_token: figma
+    company: Figma
+    max_jobs: 12
+    min_interval_seconds: 2
+    keywords: ["product manager", "product design", "product research", "growth product"]
+
+  greenhouse_webflow:
+    enabled: true
+    adapter: greenhouse
+    board_token: webflow
+    company: Webflow
+    max_jobs: 12
+    min_interval_seconds: 2
+    keywords: ["product manager", "product design", "product research", "growth product"]
+
+  greenhouse_intercom:
+    enabled: true
+    adapter: greenhouse
+    board_token: intercom
+    company: Intercom
+    max_jobs: 12
+    min_interval_seconds: 2
+    keywords: ["product manager", "product design", "product research", "growth product"]
+
+  greenhouse_stripe:
+    enabled: true
+    adapter: greenhouse
+    board_token: stripe
+    company: Stripe
+    max_jobs: 12
+    min_interval_seconds: 2
+    keywords: ["product manager", "product design", "product research", "growth product"]
 
   boss:
     enabled: false           # 高风险，默认关

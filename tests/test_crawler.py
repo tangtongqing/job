@@ -23,6 +23,8 @@ from src.crawler.service import CrawlService
 from src.crawler.verifier import verify_job
 from src.crawler.adapters.base import BaseAdapter
 from src.crawler.adapters.factory import create_adapter
+from src.crawler.adapters.greenhouse import GreenhouseAdapter, _extract_requirements
+from src.crawler.config import load_crawler_config
 
 
 @pytest.fixture()
@@ -170,6 +172,131 @@ def test_classify_job():
     assert classify_job("Java 后端工程师") == "tech"
     assert classify_job("UI 设计师") == "design"
     assert classify_job("运营专员") == "operation"
+
+
+def test_extract_english_experience():
+    assert extract_experience("5+ years of product management experience") == "5+ years"
+    assert extract_experience("3-5 years building SaaS products") == "3-5 years"
+
+
+def test_crawler_config_supports_lists_and_shared_adapters(tmp_path):
+    config_file = tmp_path / "sources.yaml"
+    config_file.write_text(
+        """
+global:
+  batch_size: 10
+sources:
+  first_board:
+    enabled: true
+    adapter: greenhouse
+    keywords:
+      - product manager
+      - product design
+  second_board:
+    enabled: true
+    adapter: greenhouse
+    keywords: ["growth product", "research"]
+""".strip(),
+        encoding="utf-8",
+    )
+    config = load_crawler_config(config_file)
+    assert config.enabled_source_names() == ["first_board", "second_board"]
+    assert config.sources["first_board"].options["keywords"] == [
+        "product manager",
+        "product design",
+    ]
+    assert config.sources["second_board"].options["keywords"] == [
+        "growth product",
+        "research",
+    ]
+
+
+def test_greenhouse_adapter_parses_full_job():
+    payload = {
+        "jobs": [
+            {
+                "id": 7,
+                "company_name": "Example SaaS",
+                "title": "Senior Product Manager, AI",
+                "absolute_url": "https://boards.greenhouse.io/example/jobs/7",
+                "location": {"name": "Remote"},
+                "first_published": "2026-07-10T08:00:00Z",
+                "application_deadline": "2026-08-10",
+                "departments": [{"name": "Product"}],
+                "content": (
+                    "&lt;h2&gt;The role&lt;/h2&gt;"
+                    "&lt;p&gt;You have an opportunity to own the AI product roadmap and customer outcomes.&lt;/p&gt;"
+                    "&lt;h2&gt;Qualifications&lt;/h2&gt;"
+                    "&lt;p&gt;5+ years of product management experience. Bachelor degree preferred.&lt;/p&gt;"
+                    "&lt;h2&gt;Compensation&lt;/h2&gt;"
+                    "&lt;p&gt;$180,000 - $240,000 a year&lt;/p&gt;"
+                ),
+            },
+            {
+                "id": 8,
+                "company_name": "Example SaaS",
+                "title": "Account Executive",
+                "absolute_url": "https://boards.greenhouse.io/example/jobs/8",
+                "location": {"name": "Remote"},
+                "departments": [{"name": "Sales"}],
+                "content": "&lt;p&gt;Sell the product.&lt;/p&gt;",
+            },
+        ]
+    }
+    adapter = GreenhouseAdapter(
+        config={
+            "source_name": "greenhouse_example",
+            "board_token": "example",
+            "keywords": ["product manager"],
+            "max_jobs": 5,
+            "min_interval_seconds": 0,
+        },
+        json_fetcher=lambda url: payload,
+    )
+
+    rows = adapter.crawl()
+    assert len(rows) == 1
+    job = rows[0]
+    assert job["company"] == "Example SaaS"
+    assert job["title"] == "Senior Product Manager, AI"
+    assert "own the AI product roadmap" in job["jd"]
+    assert "5+ years" in job["requirement"]
+    assert job["requirement"].startswith("Qualifications")
+    assert "You have an opportunity" not in job["requirement"]
+    assert job["salary"] == "$180,000 - $240,000 a year"
+    assert job["education"] == "本科"
+    assert job["experience"] == "5+ years"
+    assert job["apply_url"].endswith("/jobs/7")
+    assert job["source_url"] == job["apply_url"]
+    assert job["published_at"] is not None
+    assert job["deadline"] is not None
+
+
+@pytest.mark.parametrize(
+    ("heading", "ending"),
+    [
+        ("We’d love to hear from you if you have:", "Pay Transparency Disclosure"),
+        ("Must Have Experience", "What you'll be doing:"),
+        ("What skills do I need?", "Benefits"),
+        ("Who you are", "Why this role, why now"),
+    ],
+)
+def test_greenhouse_requirement_headings_are_exact(heading, ending):
+    text = (
+        "You have an opportunity to work on a meaningful product.\n"
+        f"{heading}\n"
+        "5+ years of relevant experience.\n"
+        f"{ending}\n"
+        "This content is not part of the requirements."
+    )
+
+    requirement = _extract_requirements(text)
+
+    assert requirement is not None
+    assert requirement.startswith(heading)
+    assert "5+ years" in requirement
+    assert "You have an opportunity" not in requirement
+    assert "This content is not part" not in requirement
 
 
 # ---------- 5. 同源去重 ----------
