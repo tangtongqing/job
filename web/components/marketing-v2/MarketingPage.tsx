@@ -120,14 +120,10 @@ export function MarketingPage() {
                 <span className="h-2 w-2 rounded-full bg-white/25" /><span className="h-2 w-2 rounded-full bg-white/15" /><span className="h-2 w-2 rounded-full bg-white/10" />
                 <span className="ml-3 text-[9px] text-white/35">jobpulse.local/dashboard</span>
               </div>
-              <ProductFilm src="/media/product-overview.webm" label="JobPulse 求职概览产品实录" className="aspect-[16/9] rounded-xl">
+              <ProductFilm src="/media/product-overview.webm" label="JobPulse 求职概览产品实录" playback="controllable" className="aspect-[16/9] rounded-xl">
                 <HeroProductFallback />
               </ProductFilm>
             </div>
-            <motion.svg aria-hidden="true" viewBox="0 0 1200 150" className="pointer-events-none absolute -bottom-[7.25rem] left-1/2 hidden h-36 w-[92%] -translate-x-1/2 overflow-visible md:block">
-              <motion.path d="M 20 18 C 220 18, 210 112, 420 92 S 760 58, 1180 125" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" initial={reduceMotion ? { pathLength: 1 } : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.4, delay: 1 }} />
-              {[20, 420, 760, 1180].map((cx, index) => <motion.circle key={cx} cx={cx} cy={[18, 92, 77, 125][index]} r="5" fill="#fbfbfc" stroke="#6366f1" strokeWidth="2" initial={reduceMotion ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.25 + index * 0.15 }} />)}
-            </motion.svg>
           </motion.div>
         </div>
       </section>
@@ -170,7 +166,7 @@ export function MarketingPage() {
           <div className="mt-14 grid gap-x-6 gap-y-12 md:grid-cols-2">
             {WORKFLOW_FILMS.map((film, index) => (
               <motion.article key={film.number} initial={reduceMotion ? false : { opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-10%" }} transition={{ duration: 0.55, delay: index % 2 * 0.08 }}>
-                <ProductFilm src={film.src} label={`${film.title}产品实录`} className="aspect-[16/10] rounded-2xl border border-black/[0.08] dark:border-white/10">
+                <ProductFilm src={film.src} label={`${film.title}产品实录`} playback="hover" className="aspect-[16/10] rounded-2xl border border-black/[0.08] dark:border-white/10">
                   <WorkflowFallback kind={film.fallback} />
                 </ProductFilm>
                 <div className="mt-5 grid grid-cols-[2rem_1fr] gap-3">

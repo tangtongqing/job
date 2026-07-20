@@ -33,6 +33,7 @@ output/playwright/
 # 构建产物
 dist/
 build/
+*.tsbuildinfo
 
 # OS
 Thumbs.db
