@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.responses import APIError, api_error_handler, validation_error_handler
+from src.config import get_settings
 from src.api.routes.app import (
     jobs,
     applications,
@@ -26,15 +27,11 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS（前端 web/ 跑在 3000 端口）
+# CORS（本地默认允许 3000/3100；线上由 CORS_ORIGINS 精确配置）
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3100",
-        "http://127.0.0.1:3100",
-    ],
+    allow_origins=settings.allowed_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

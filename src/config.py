@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     # 数据库
     database_url: str = "sqlite:///data/jobpulse.db"
 
+    # Web / deployment
+    cors_origins: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:3100,http://127.0.0.1:3100"
+    )
+
     # LLM
     openai_api_key: str = ""
     deepseek_api_key: str = ""
@@ -27,6 +33,7 @@ class Settings(BaseSettings):
     crawl_interval_minutes: int = 60
     crawl_max_concurrent: int = 3
     crawl_user_agent: str = "JobPulse/1.0"
+    crawler_trigger_enabled: bool = True
 
     # 业务阈值
     no_response_days: int = 14
@@ -38,6 +45,11 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
+
+    @property
+    def allowed_cors_origins(self) -> list[str]:
+        """Return normalized origins from the deployment-friendly CSV setting."""
+        return [origin.strip().rstrip("/") for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 @lru_cache

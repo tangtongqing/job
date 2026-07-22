@@ -1,12 +1,13 @@
 /**
  * API Client —— 统一处理后端 {data, meta} / {error} envelope。
  *
- * Base URL 从 NEXT_PUBLIC_API_BASE_URL 读，本地缺省使用后端标准 8000 端口。
+ * Base URL 从 NEXT_PUBLIC_API_BASE_URL 读；未配置时连接公开演示 API。
  * 页面在浏览器运行时请求；build 阶段不强依赖后端在线。
  */
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://jobpulse-api-production.up.railway.app/api/v1";
 
 // ---------- 通用类型 ----------
 

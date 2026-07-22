@@ -1,0 +1,16 @@
+.git
+.github
+.agent-ops
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.env.local
+data
+web
+tests
+docs
+output
+node_modules
+.next

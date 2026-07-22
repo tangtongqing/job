@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 from src.db.session import get_db
 from src.db.models import CrawlLog
 from src.crawler.service import CrawlService
-from src.api.responses import make_paginated, ValidationError
+from src.api.responses import ForbiddenError, make_paginated, ValidationError
+from src.config import get_settings
 
 router = APIRouter(prefix="/crawler", tags=["crawler"])
 
@@ -40,6 +41,9 @@ def _get_service() -> CrawlService:
 @router.post("/trigger")
 def trigger(payload: TriggerRequest, db: Session = Depends(get_db)):
     """手动触发采集。可指定 source，或触发所有 enabled。"""
+    if not get_settings().crawler_trigger_enabled:
+        raise ForbiddenError("当前演示环境已关闭在线采集，请使用已验证的演示与快照数据")
+
     service = _get_service()
     source = payload.source
 

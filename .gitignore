@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 venv/
 .next/
+.vinext/
+.wrangler/
 *.egg-info/
 
 # 环境与密钥
