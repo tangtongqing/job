@@ -1,64 +1,63 @@
-# web · JobPulse 前端
+# JobPulse 前端
 
-> 阶段 3 TASK-016b 第一步：按 Nexora 提示词原样复现 hero 落地页。
-> 当前为**风格骨架验证版**（内容仍是通用 SaaS "Nexora"，非招聘产品）。
-> 风格确认后进入第二步：适配为招聘产品内容 + 补暗色主题。
+JobPulse 前端同时承载真实 SaaS 官网、可交互产品后台与作品集案例页。
 
-## 运行
+## 页面入口
+
+- `/`：产品营销页与真实产品录屏
+- `/dashboard`：求职数据看板
+- `/jobs`、`/jobs/[id]`：岗位发现与详情
+- `/saved`：收藏与待投递
+- `/applications`、`/applications/[id]`：投递流程与邮件文本解析
+- `/todo`：近期安排
+- `/subscriptions`：岗位订阅规则
+- `/crawler`：数据来源与采集状态
+- `/case-study`：产品设计案例
+
+线上地址：<https://jobpulse-product-demo.tongqtang.chatgpt.site>
+
+## 本地运行
+
+要求 Node.js 22.13+。
 
 ```bash
-cd web
 npm install
 npm run dev
-# 打开 http://localhost:3000
 ```
 
-> 依赖：Node 18+。首次安装会拉取 next/react/framer-motion/lucide-react/tailwindcss。
+如需连接本地 FastAPI，在 `.env.local` 中配置：
 
-## 当前文件结构
-
-```
-web/
-├── app/
-│   ├── globals.css          # 字体导入 + CSS 变量（配色 token，light only）
-│   ├── layout.tsx           # 根布局
-│   └── page.tsx             # 落地页（7 屏滚动叙事 + 产品预览）
-├── components/
-│   ├── ui/
-│   │   └── button.tsx       # shadcn/ui Button（精简版）
-│   └── marketing/
-│       ├── Navbar.tsx       # 顶部导航
-│       ├── Hero.tsx         # hero 区（视频背景 + 5 层 framer-motion 动画）
-│       └── DashboardPreview.tsx  # 纯 React 代码绘制的仪表盘预览
-├── lib/
-│   └── utils.ts             # cn() 类名合并
-├── tailwind.config.ts       # fontFamily + 语义色映射
-├── tsconfig.json            # @/* 路径别名
-├── next.config.js
-├── postcss.config.js
-└── package.json
+```env
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
 
-## 设计 token（对应提示词）
+未配置时使用公开演示 API。
 
-| Token | 值 | 用途 |
-|-------|-----|------|
-| `--background` | `0 0% 100%` | 白底 |
-| `--foreground` | `210 14% 17%` | 深炭灰文字 |
-| `--accent` | `239 84% 67%` | 靛蓝（图表/CTA点缀） |
-| `--muted-foreground` | `184 5% 55%` | 次要文字 |
-| `--radius` | `0.5rem` | 圆角基准 |
-| `--font-display` | Instrument Serif | 标题（italic 用于强调词） |
-| `--font-body` | Inter | 正文 |
-| `--shadow-dashboard` | 两层柔阴影 | 产品预览和实体卡片 |
+## 验证与构建
 
-## 已知待办（第二步处理）
+```bash
+npm run lint
+npm run build
+npm run build:sites
+```
 
-- [ ] 内容替换为招聘产品（hero 文案 / dashboard 换成我们的看板）
-- [ ] 补 `.dark` 主题（双主题决策已定，待风格确认后加）
-- [ ] 字体改用 next/font 本地加载（当前用 Google Fonts CDN，生产前换）
-- [ ] 视频背景是占位 URL，后续确认是否保留/替换
+- `npm run build`：Next.js 生产构建，Windows 中文路径下固定使用 Webpack，规避 Turbopack 路径问题。
+- `npm run build:sites`：生成 Codex Sites 所需的 Cloudflare Worker 兼容产物。
 
----
+## 技术结构
 
-*TASK-016b step 1 · 2026-06-24*
+- Next.js 16 + React 19 + TypeScript
+- Tailwind CSS + Framer Motion + Lucide
+- `next-themes` 双主题
+- vinext + Cloudflare Worker 运行时
+- `lib/api.ts` 统一处理后端响应与错误
+
+## 线上边界
+
+- 公开站点连接 Railway FastAPI。
+- 后台为共享演示环境，没有账号隔离。
+- 在线采集触发已关闭，避免匿名访客消耗外部资源。
+- 邮件功能只解析用户粘贴的文本；线上未配置任何 LLM 或邮件服务密钥，当前使用本地正则降级。
+- 侧栏“重置演示数据”可恢复 24 岗位、5 投递、2 收藏、2 待投递和 3 条订阅。
+
+部署记录见 [`../docs/qa/DEPLOYMENT-2026-07-22.md`](../docs/qa/DEPLOYMENT-2026-07-22.md)。

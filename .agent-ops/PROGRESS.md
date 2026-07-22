@@ -14,13 +14,17 @@
 
 ## 一、当前状态（一句话）
 
-> **三表面与完整数据演示已通过正式验收：24 条确定性快照 + 32 条公开 API 真实岗位可用，核心求职闭环、双端响应式与数据恢复均验证通过。**
+> **JobPulse 已公开部署：Codex Sites 承载官网、产品后台与案例页，Railway 承载 FastAPI 和持久化 SQLite；线上共享演示闭环已验收。**
 
-**最后更新**：2026-07-16（完整演示验收通过，详见 `docs/qa/ACCEPTANCE-2026-07-16.md`）
+**最后更新**：2026-07-22（公开部署与线上验收通过，详见 `docs/qa/DEPLOYMENT-2026-07-22.md`）
 **当前执行者**：高级智能体（Codex）
 **交接文件**：`.agent-ops/HANDOVER-TO-ADVANCED-AGENT.md`
 **设计基线**：`docs/design/REDESIGN-BRIEF.md`
-**当前焦点**：用户体验确认与稳定版本提交
+**当前焦点**：面试展示稳定性；长期个人使用进入未来路线图
+
+**公开入口**：<https://jobpulse-product-demo.tongqtang.chatgpt.site>
+
+**产品后台**：<https://jobpulse-product-demo.tongqtang.chatgpt.site/dashboard>
 
 ---
 
@@ -32,13 +36,11 @@
 | 阶段 2 架构设计 | ✅ 完成（v3，含安全测试门禁） | 架构/数据库/API/采集/AI/安全报告 |
 | 阶段 3 UI/UX 设计 | ✅ 完成 | 第二版居中产品舞台、持续状态轨迹与三表面设计已落地 |
 | 阶段 4 实现 | ✅ 完成 | 收藏/待投递、订阅、Demo 重置、核心产品页面、官网与案例页已实现 |
-| 阶段 5 质量 | ✅ 完成 | 107 项后端测试、前端 lint 与 14 路由生产构建通过；数据与关键路由联调通过 |
+| 阶段 5 质量 | ✅ 完成 | 109 项后端测试、前端 lint 与 14 路由生产构建通过；数据与关键路由联调通过 |
 | 阶段 6 作品集 | ✅ 完成 | 独立 `/case-study` 与 59.4 秒真实 Demo 视频已接入 |
+| 阶段 7 线上部署 | ✅ 完成 | Codex Sites 公开前端 + Railway 后端与持久化卷；线上核心流程验收通过 |
 
-> **并行进行中**：
-> - 阶段 3 营销页视觉（TASK-VISUAL-APPLE-GRADE）交 GPT
-> - 阶段 4 后端 + 产品面核心实现已验收
-> - Offerbiu 对标已完成，战略决策：差异化，不模仿简历/AI 线
+> **当前结论**：阶段 1-7 已全部收口；后续仅做面试前巡检，以及登录隔离、定时采集等长期能力。
 
 ---
 
@@ -71,7 +73,9 @@
 | `docs/design/REFERENCE-MAPPING.md` | v2 | 2026-06-24 | +§六营销面参考 |
 | `docs/design/REDESIGN-BRIEF.md` | **v1.0 🆕** | 2026-07-15 | 三表面重构基线、设计方案与决策日志 |
 | `docs/credible-job-ingestion/` | **v1.0 🆕** | 2026-07-16 | 公开 ATS 调研、实施决策与验证记录 |
-| `.agent-ops/PROGRESS.md` | 本文件 | 2026-07-01 | 进度SSOT |
+| `docs/qa/DEPLOYMENT-2026-07-22.md` | **v1.0 🆕** | 2026-07-22 | 线上地址、拓扑、成本、付费 API 状态与验收证据 |
+| `README.md` / `web/README.md` | 当前版 | 2026-07-22 | 在线入口、本地运行、Sites 构建与公开演示边界 |
+| `.agent-ops/PROGRESS.md` | 本文件 | 2026-07-22 | 进度 SSOT |
 | `.agent-ops/TASK-PIPELINE.md` | ✅ 已更新 | 2026-07-01 | 全阶段状态（含阶段3完成+后端启动） |
 | `.agent-ops/STAGE3-PIPELINE.md` | v3 | 2026-07-01 | TASK-016b 完成+视觉优化 |
 | `.agent-ops/BLOCKED-LIST.md` | v3 | 2026-07-01 | 营销页已完成，更新阻塞项 |
@@ -89,12 +93,12 @@
 | TASK-013 | 看板 shape | product | ✅ 完成 | |
 | TASK-014 | 岗位 shape | product | ✅ 完成 | |
 | TASK-015 | 投递 shape | product | ✅ 完成 | |
-| **TASK-DESIGN-ALIGN** 🆕 | **设计样式对齐** | 两面 | 🔄 进行中 | **当前焦点**。产品面+营销面样式均未对齐，不能直接 craft |
+| **TASK-DESIGN-ALIGN** | **设计样式对齐** | 两面 | ✅ 完成 | 品牌 Token 与三表面设计已统一并上线 |
 | TASK-016a | 产品面 craft / 核心前端 | product | ✅ 完成 | TASK-FE-PRODUCT-001 已验收通过，真实 API 接入 |
 | TASK-016b | 营销面 craft | brand | ✅ 完成 | 营销页 7 屏骨架已完成，P0 视觉优化和截图验证已补齐 |
 | TASK-VISUAL-OPTIMIZATION | 营销页视觉优化 | brand | ✅ 完成 | 内容丰富度、桌面/移动、亮/暗主题、截图验证完成 |
-| TASK-017 | critique + audit | 两面 | 🔜 下一步 | 前后端核心闭环后进入质量审查 |
-| TASK-018 | polish + harden | 两面 | ⏸️ | 等 017 |
+| TASK-017 | critique + audit | 两面 | ✅ 完成 | 完整演示与线上流程均已验收 |
+| TASK-018 | polish + harden | 两面 | ✅ 完成 | 响应式、视频播放、部署安全与公开访问已收口 |
 
 ---
 
@@ -115,24 +119,22 @@
 
 > 详见 `.agent-ops/BLOCKED-LIST.md`
 
-**BLOCKED-VERIFY**（Codex 做了，需高级智能体/用户验收）：
-- craft 渲染效果（产品面+营销面）
-- critique 视觉审查
-- 响应式 + PWA 验证
+**当前无部署阻塞。**
 
-**BLOCKED-DO**（需要外部输入）：
-- AI 解析真实验证（需 API Key）
+**需要外部输入的未来事项**：
 - 用户访谈（路径 B 验证窗口）
+- 若启用真实 LLM 解析，需要用户明确提供密钥并接受费用与隐私影响；当前线上保持无付费 API
+- 若转为长期个人使用，需要决定账号体系、数据库与长期托管预算
 
 ---
 
 ## 七、下一步动作
 
-**当前焦点**：验收已通过，等待用户确认是否提交稳定版本。
+**当前焦点**：保持面试演示稳定，不扩张为长期多用户产品。
 
-1. 修复非阻塞的空订阅表单反馈，或纳入下一轮体验优化。
-2. 按用户要求提交稳定版本。
-3. 长期自动调度、链接复核、账户同步与通知进入未来路线图。
+1. 面试前检查公开站点与 Railway 免费额度状态，并重置标准演示数据。
+2. 空订阅表单反馈、UTC 时间 API 与 SQLAlchemy 旧接口纳入非阻塞维护。
+3. 长期自动调度、链接复核、账号隔离、数据库迁移与通知进入未来路线图。
 
 ---
 

@@ -7,11 +7,20 @@
 
 ## 一、项目一句话
 
-JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具。Python FastAPI 后端 + Next.js 14 前端。当前处于阶段 5（质量收口），核心链路已完成。
+JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具。Python FastAPI 后端 + Next.js 16/React 19 前端。阶段 1-7 已完成，项目已公开部署并通过线上验收。
 
 ---
 
-## 二、当前完成状态（截至 2026-07-16）
+## 二、当前完成状态（截至 2026-07-22）
+
+### 线上交付—— ✅ 已公开部署
+
+- 官网 / 产品 / 案例：<https://jobpulse-product-demo.tongqtang.chatgpt.site>
+- 后端健康检查：<https://jobpulse-api-production.up.railway.app/health>
+- 部署拓扑：Codex Sites 前端 + Railway FastAPI + SQLite 持久化卷
+- 公开版本为共享演示环境；在线采集触发关闭，Demo 重置保留
+- Railway 无活动付费订阅；线上未配置 LLM 或邮件服务密钥
+- 详细记录：`docs/qa/DEPLOYMENT-2026-07-22.md`
 
 ### 后端（src/）—— ✅ 四大模块全部完成并验收
 
@@ -21,18 +30,18 @@ JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具
 | API 层（jobs/applications/dashboard/todo） | `src/api/routes/app/` + `src/main.py` | 17 | ✅ |
 | 采集层（合规+Greenhouse 公共 API+normalizer+dedup+service） | `src/crawler/` | 32 | ✅ |
 | AI 解析层（三级降级+正则+缓存+匹配+parse-email） | `src/core/ai/` | 17 | ✅ |
-| **合计** | | **107 passed** | |
+| **合计** | | **109 passed** | |
 
-当前已验证数据集为 56 条岗位：24 条明确标记的确定性演示快照 + 32 条来自 Figma、Webflow、Intercom、Stripe 公开 Greenhouse API 的真实岗位。JD、官方投递链接和来源链接完整率 100%，结构化任职要求完整率 98%。
+本地完整验收数据集可达到 56 条岗位：24 条确定性演示快照 + 32 条来自 Figma、Webflow、Intercom、Stripe 公开 Greenhouse API 的真实岗位。线上固定为 24 条可恢复快照，JD、官方投递链接和来源链接完整，并避免匿名访客触发外部采集。
 
 ### 前端（web/）—— ✅ 营销面 + 产品面完成
 
 | 面 | 路由 | 状态 |
 |----|------|------|
 | 营销面 | `/`（7 屏落地页 + 双主题） | ✅ build/lint 通过 |
-| 产品面 | `/dashboard` `/jobs` `/jobs/[id]` `/applications` `/applications/[id]` `/todo` `/crawler` | ✅ build/lint 通过 |
+| 产品面 | `/dashboard` `/jobs` `/jobs/[id]` `/saved` `/applications` `/applications/[id]` `/todo` `/subscriptions` `/crawler` | ✅ build/lint 通过 |
 | PWA | manifest + icon | ✅ |
-| P2 polish | next/font + hamburger + toast + crawler disabled | ✅ build 通过 |
+| Sites 部署 | vinext + Cloudflare Worker 入口 + OG 分享图 | ✅ 公开上线 |
 
 ### 文档（docs/）—— ✅ 阶段 1-3 文档齐全
 
@@ -51,7 +60,7 @@ JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具
 
 | # | 事项 | 原因 | 负责方 |
 |---|------|------|--------|
-| 1 | **长期自动调度** | 当前支持手动触发真实公开 API 采集；尚未产品化定时刷新、过期下架与通知 | 后续版本 |
+| 1 | **长期自动调度** | 线上演示关闭采集触发；尚未产品化受控定时刷新、过期下架与通知 | 后续版本 |
 | 2 | **用户访谈** | 路径 B 验证窗口仍需真人样本 | 用户亲自 |
 
 ### 🟡 中优先级
@@ -59,7 +68,7 @@ JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具
 | # | 事项 | 说明 |
 |---|------|------|
 | 3 | 一键启动脚本 | 可补 `npm run demo` 统一启动后端、前端和种子数据 |
-| 4 | AI 真实解析 | 三级降级已实现；LLM 路径仍需用户提供 API Key 验证 |
+| 4 | AI 真实解析 | 三级降级已实现；线上故意不配置付费 API，当前使用正则路径 |
 | 5 | 暗色模式回归 | 后续视觉迭代时继续做截图对比 |
 
 ### 🟢 低优先级
@@ -128,7 +137,8 @@ web/
 │   ├── status-config.ts        # 9状态配置（code/label/color/nextStatuses）
 │   ├── dashboard-data.ts       # 演示数据（可配置）
 │   └── utils.ts                # cn() 类名合并
-└── [配置] package.json / next.config.js / tailwind.config.ts / tsconfig.json
+├── worker/index.ts              # Codex Sites Cloudflare Worker 入口
+└── [配置] package.json / next.config.ts / vite.config.ts / tailwind.config.ts / tsconfig.json
 ```
 
 ---
@@ -159,6 +169,7 @@ npm install
 npm run dev      # 开发
 npm run build    # 生产构建
 npm run lint     # 检查
+npm run build:sites  # Codex Sites 构建
 ```
 
 ### 前后端联调
@@ -195,11 +206,11 @@ cd web && npm run dev
 
 ## 七、给高级智能体的建议工作顺序
 
-1. **完整演示验收**：走通采集页、岗位列表、岗位详情、官方投递、收藏/待投递与状态流转。
-2. **长期使用设计**：实现定时刷新、失败重试、链接复核、岗位过期下架和通知。
+1. **面试前巡检**：确认公开站点与 Railway 在线，执行 Demo 重置并走一次主链路。
+2. **长期使用设计**：若用户确认长期使用，再实现账号隔离、数据库迁移、定时刷新、失败重试与通知。
 3. **扩展公开来源**：只接入有官方公共 API/明确许可的 ATS；继续保持 BOSS/牛客关闭。
-4. **AI 真实解析**：用户提供 API Key 后验证 LLM 路径，继续保留用户确认门槛。
-5. **一键启动**：按需要补统一的本地演示启动脚本。
+4. **AI 真实解析**：只有用户明确接受费用与隐私影响后才配置 API Key；保留用户确认门槛。
+5. **成本管理**：Railway 免费试用结束前决定停止服务或升级，并在付费计划设置用量上限。
 
 ---
 
@@ -207,7 +218,9 @@ cd web && npm run dev
 
 | 限制 | 影响 | 解法 |
 |------|------|------|
-| 自动调度未产品化 | 真实岗位目前由采集页手动触发 | 后续加入持久化调度与刷新策略 |
+| 自动调度未产品化 | 本地真实岗位由采集页手动触发；公开版已关闭采集触发 | 后续加入持久化调度、刷新策略与权限控制 |
+| 公开版本共享数据 | 访客操作会互相影响 | 长期版增加登录与用户数据隔离 |
+| Railway 免费试用 | 额度或试用期结束后服务可能暂停 | 面试前巡检；长期版明确预算 |
 | 公开来源覆盖有限 | 当前只有四个 Greenhouse 来源 | 逐个验证官方 ATS 接口后扩展 |
 | 1 条真实岗位无结构化要求 | 原始 JD 没有独立要求标题 | 保留完整 JD，不推测或伪造 |
 | datetime.utcnow() 弃用 | DeprecationWarning（非错误） | 批量换 datetime.now(UTC) |
@@ -216,4 +229,4 @@ cd web && npm run dev
 
 ---
 
-*最后更新：2026-07-16 | 维护方：Codex（主智能体）*
+*最后更新：2026-07-22 | 维护方：Codex（主智能体）*

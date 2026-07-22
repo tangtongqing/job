@@ -30,7 +30,7 @@
 
 ---
 
-## ✅ 阶段 2（架构设计）进行中
+## ✅ 阶段 2（架构设计）已完成
 
 详见 `.agent-ops/STAGE2-PIPELINE.md`。
 
@@ -51,21 +51,21 @@
 
 ---
 
-## 🔄 阶段 3（UI/UX 设计）进展（2026-07-01 更新）
+## ✅ 阶段 3（UI/UX 设计）已完成（2026-07-22 更新）
 
 | ID | 任务 | 状态 | 说明 |
 |----|------|------|------|
 | TASK-012~015 | 设计初始化 + 3 个 shape | ✅ 完成 | PRODUCT/DESIGN/BRAND + 看板/岗位/投递 shape |
 | TASK-016b | 营销面 craft | ✅ 完成 | 7 屏滚动叙事 + 两轮视觉优化（见 TASK-VISUAL-OPTIMIZATION-REPORT）|
-| TASK-016a | 产品面 craft | ⏸️ 暂停 | 等后端完成有真实数据后再做 |
-| TASK-017 | critique + audit | ⏸️ | 等 016a |
-| TASK-018 | polish + harden | ⏸️ | 等 017 |
+| TASK-016a | 产品面 craft | ✅ 完成 | 产品后台已接入真实结构数据与共享演示数据 |
+| TASK-017 | critique + audit | ✅ 完成 | 产品面与营销面体验审查、响应式和异常态已收口 |
+| TASK-018 | polish + harden | ✅ 完成 | 视频交互、演示路径、构建与线上验收已完成 |
 
-**营销面视觉**：TASK-VISUAL-APPLE-GRADE 交 GPT 进行中（Apple 级设计美感：屏级配色+滚动动画质感）。
+**营销面视觉**：TASK-VISUAL-APPLE-GRADE 已落地并完成交互收口；主视频支持停止回到静态页面，辅助视频仅悬停播放。
 
 ---
 
-## 🔄 阶段 4（实现）后端开发启动（2026-07-01）
+## ✅ 阶段 4（实现）已完成（2026-07-09）
 
 Offerbiu 对标完成（见 `competitor-offerbiu.md` + `competitor-offerbiu-innerpages.md`），战略决策：**差异化，不做简历/AI 匹配**，深化采集+状态机+看板主线。架构无需改动。
 
@@ -91,20 +91,34 @@ Offerbiu 对标完成（见 `competitor-offerbiu.md` + `competitor-offerbiu-inne
 | TASK-BE-AI-001 | AI 邮件解析 | ✅ 已验收 | parse-email 只建议不流转，通过 |
 | TASK-FE-PRODUCT-001 | 产品面核心前端 | ✅ 已验收（Codex 小修） | 7 页产品面、API client、状态配置、App Shell，build/lint/HTTP 路由探测通过 |
 
-**下一阶段**：阶段 5 critique/audit、响应式、PWA、异常态、演示数据和作品集路径收口。
+**阶段结论**：实现已验收，后续质量、作品集与部署工作见下方阶段 5-7 收口记录。
 
 ---
 
-## 🔄 阶段 5（质量收口）启动（2026-07-09）
+## ✅ 阶段 5（质量收口）已完成（2026-07-22）
 
 | ID | 任务 | 状态 | 说明 |
 |----|------|------|------|
-| TASK-QA-001 | 产品面 + 营销面 critique/audit | 🔄 已下发 | 先审查，不大改；输出严重度分级问题清单和返工拆分 |
+| TASK-QA-001 | 产品面 + 营销面 critique/audit | ✅ 完成 | 响应式、异常态、视频交互与完整演示通过 |
 
 阶段 5 目标：
 1. 发现并收口影响作品集可信度的体验/响应式/异常态问题。
 2. 补齐 PWA、演示数据、启动说明和截图证据。
 3. 为阶段 6 作品集包装准备稳定的演示路径。
+
+---
+
+## ✅ 阶段 5-7 收口与公开部署（2026-07-22）
+
+| ID | 任务 | 状态 | 说明 |
+|----|------|------|------|
+| TASK-QA-001 | 产品面 + 营销面 critique/audit | ✅ 完成 | 响应式、异常态、视频交互与完整演示通过 |
+| TASK-PORTFOLIO-001 | 作品集案例与录屏 | ✅ 完成 | `/case-study` 与真实产品录屏已上线 |
+| TASK-DEPLOY-001 | 前后端部署 | ✅ 完成 | Codex Sites 公开前端 + Railway FastAPI/SQLite 持久化卷 |
+| TASK-ONLINE-QA-001 | 线上核心流程验收 | ✅ 完成 | 岗位、JD、投递链接、收藏、创建投递、CORS、采集保护和重置通过 |
+| TASK-DOC-ARCHIVE-001 | 文档与存档同步 | ✅ 完成 | README、交接、进度与部署验收记录更新 |
+
+当前不再处于开发流水线执行期。面试展示以 `docs/qa/DEPLOYMENT-2026-07-22.md` 为运行事实源，长期个人使用功能进入未来路线图。
 
 ---
 

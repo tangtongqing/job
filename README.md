@@ -2,6 +2,15 @@
 
 JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位、收藏决策、投递状态和近期安排收进同一个求职工作台。
 
+## 在线体验
+
+- SaaS 官网：<https://jobpulse-product-demo.tongqtang.chatgpt.site>
+- 产品后台：<https://jobpulse-product-demo.tongqtang.chatgpt.site/dashboard>
+- 作品集案例：<https://jobpulse-product-demo.tongqtang.chatgpt.site/case-study>
+- 后端健康检查：<https://jobpulse-api-production.up.railway.app/health>
+
+站点已开放为公开访问。线上后台使用共享演示数据，访客操作会影响同一份数据；侧栏可二次确认后恢复标准场景。
+
 项目包含三个彼此独立的界面：
 
 - `/`：面向真实用户的 SaaS 官网，含真实产品录屏。
@@ -14,11 +23,13 @@ JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位�
 
 同时支持：岗位订阅 CRUD、事件时间线、AI 邮件解析建议（用户确认后才更新）、公开招聘 API 数据采集，以及一键恢复确定性的 Demo 数据。
 
-当前数据层由两部分组成：24 条可离线复现的完整演示快照，以及来自 Figma、Webflow、Intercom、Stripe 公开 Greenhouse Job Board API 的真实岗位。真实岗位保留完整 JD、任职要求（原网页有明确标题时）和官方投递链接；BOSS、牛客等受限平台默认关闭，不绕过登录、验证码或反爬限制。
+数据层支持两部分：24 条可离线复现的完整演示快照，以及来自 Figma、Webflow、Intercom、Stripe 公开 Greenhouse Job Board API 的真实岗位。线上公开演示固定使用 24 条快照，并关闭匿名采集触发；本地可按需运行公开来源采集。岗位保留完整 JD、任职要求和官方投递链接；BOSS、牛客等受限平台默认关闭，不绕过登录、验证码或反爬限制。
+
+“邮件解析”是粘贴招聘邮件文本后给出状态建议，不负责收发邮件。线上没有配置 OpenAI、DeepSeek、SMTP、SendGrid 或 Resend 等付费 API；无密钥时自动使用本地正则降级解析，且任何状态变化仍需用户确认。
 
 ## 本地启动
 
-要求 Python 3.10+ 与 Node.js 18+。
+要求 Python 3.10+ 与 Node.js 22.13+。
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -47,7 +58,7 @@ npm run dev
 DEMO_RESET_ENABLED=false
 ```
 
-前端默认请求 `http://127.0.0.1:8000/api/v1`；如后端使用其他端口，在 `web/.env.local` 配置：
+未配置环境变量时，前端默认连接线上演示 API。如需联调本地后端，在 `web/.env.local` 配置：
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8100/api/v1
@@ -60,16 +71,18 @@ python -m pytest -q
 cd web
 npm run lint
 npm run build
+npm run build:sites
 ```
 
-当前基线：107 项后端测试通过，前端 ESLint 零警告，14 个 Next.js 路由完成生产构建。
+当前基线：109 项后端测试通过，前端 ESLint 零错误，14 个 Next.js 路由完成 Next.js 与 Codex Sites 生产构建；线上核心流程验收通过。
 
 ## 技术栈
 
 - 后端：FastAPI、SQLAlchemy、Pydantic、SQLite（可演进 PostgreSQL）
-- 前端：Next.js 14、TypeScript、Tailwind CSS、Framer Motion、Lucide
+- 前端：Next.js 16、React 19、TypeScript、Tailwind CSS、Framer Motion、Lucide、vinext
 - 数据采集：httpx、Playwright、APScheduler
 - 演示视频：Playwright 自动操作真实产品并录制 WebM
+- 部署：Codex Sites（公开前端）+ Railway（FastAPI 与 SQLite 持久化卷）
 
 ## 关键设计约束
 
@@ -79,7 +92,8 @@ npm run build
 - 官网不展示虚构用户数、收入、转化、客户 Logo 或付费权益。
 
 设计基线见 [`docs/design/REDESIGN-BRIEF.md`](docs/design/REDESIGN-BRIEF.md)，API 契约见 [`docs/architecture/api-contract.md`](docs/architecture/api-contract.md)。
+线上部署、成本和验收记录见 [`docs/qa/DEPLOYMENT-2026-07-22.md`](docs/qa/DEPLOYMENT-2026-07-22.md)。
 
 ## 合规边界
 
-确定性快照用于本地 Demo 与作品集展示，并在界面中明确标记；真实数据只通过无需登录的公开招聘 API 采集。长期自动调度、通知、账号同步与商业化仍属于后续验证范围。
+确定性快照用于 Demo 与作品集展示，并在界面中明确标记；真实数据只通过无需登录的公开招聘 API 采集。公开版本没有用户账号隔离，数据为共享演示数据；长期自动调度、通知、账号同步与商业化仍属于后续验证范围。
