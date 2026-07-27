@@ -16,16 +16,27 @@ export default function SubscriptionsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    const payload: SubscriptionPayload = {
+      keyword: form.keyword?.trim() || null,
+      company: form.company?.trim() || null,
+      location: form.location?.trim() || null,
+    };
+    if (!payload.keyword && !payload.company && !payload.location) {
+      setFormError("至少填写关键词、公司或地点中的一项");
+      return;
+    }
+    setFormError(null);
     setSaving(true);
     try {
       if (editingId) {
-        await api.updateSubscription(editingId, form);
+        await api.updateSubscription(editingId, payload);
         toast("订阅规则已更新");
       } else {
-        await api.createSubscription(form);
+        await api.createSubscription(payload);
         toast("订阅规则已创建");
       }
       setForm(EMPTY_FORM);
@@ -40,6 +51,7 @@ export default function SubscriptionsPage() {
 
   const edit = (subscription: Subscription) => {
     setEditingId(subscription.id);
+    setFormError(null);
     setForm({
       keyword: subscription.keyword || "",
       company: subscription.company || "",
@@ -82,17 +94,18 @@ export default function SubscriptionsPage() {
             <p className="mt-0.5 text-xs text-muted-foreground">至少填写一个条件，可组合提高精度。</p>
           </div>
           {editingId && (
-            <button type="button" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); }} className="grid h-11 w-11 place-items-center rounded-lg text-muted-foreground hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:hover:bg-white/[0.06]" aria-label="取消编辑">
+            <button type="button" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setFormError(null); }} className="grid h-11 w-11 place-items-center rounded-lg text-muted-foreground hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:hover:bg-white/[0.06]" aria-label="取消编辑">
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <RuleField label="关键词" icon={Search} value={form.keyword || ""} placeholder="如：AI 产品经理" onChange={(value) => setForm((current) => ({ ...current, keyword: value }))} />
-          <RuleField label="公司" icon={Building2} value={form.company || ""} placeholder="如：MiniMax" onChange={(value) => setForm((current) => ({ ...current, company: value }))} />
-          <RuleField label="地点" icon={MapPin} value={form.location || ""} placeholder="如：北京" onChange={(value) => setForm((current) => ({ ...current, location: value }))} />
+          <RuleField label="关键词" icon={Search} value={form.keyword || ""} placeholder="如：AI 产品经理" invalid={Boolean(formError)} onChange={(value) => { setForm((current) => ({ ...current, keyword: value })); if (value.trim()) setFormError(null); }} />
+          <RuleField label="公司" icon={Building2} value={form.company || ""} placeholder="如：MiniMax" invalid={Boolean(formError)} onChange={(value) => { setForm((current) => ({ ...current, company: value })); if (value.trim()) setFormError(null); }} />
+          <RuleField label="地点" icon={MapPin} value={form.location || ""} placeholder="如：北京" invalid={Boolean(formError)} onChange={(value) => { setForm((current) => ({ ...current, location: value })); if (value.trim()) setFormError(null); }} />
         </div>
+        {formError && <p id="subscription-form-error" role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">{formError}</p>}
         <div className="mt-4 flex justify-end">
           <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-5 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50">
             {editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -149,13 +162,13 @@ export default function SubscriptionsPage() {
   );
 }
 
-function RuleField({ label, icon: Icon, value, placeholder, onChange }: { label: string; icon: React.ComponentType<{ className?: string }>; value: string; placeholder: string; onChange: (value: string) => void }) {
+function RuleField({ label, icon: Icon, value, placeholder, invalid, onChange }: { label: string; icon: React.ComponentType<{ className?: string }>; value: string; placeholder: string; invalid: boolean; onChange: (value: string) => void }) {
   return (
     <label className="block">
       <span className="text-xs font-medium text-foreground">{label}</span>
       <span className="mt-1.5 flex min-h-11 items-center gap-2 rounded-lg border border-black/10 bg-[#fafafa] px-3 focus-within:border-[#6366f1] focus-within:ring-2 focus-within:ring-[#6366f1]/15 dark:border-white/10 dark:bg-background">
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} aria-invalid={invalid} aria-describedby={invalid ? "subscription-form-error" : undefined} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70" />
       </span>
     </label>
   );

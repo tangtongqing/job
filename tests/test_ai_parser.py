@@ -63,6 +63,18 @@ def test_regex_parser_fail_returns_parsed_false():
     assert r.degraded is True
 
 
+def test_regex_parser_extracts_demo_company_and_job_title():
+    """降级模式也应能识别演示岗位中的公司和岗位，便于准确匹配投递记录。"""
+    result = RegexParser().parse(
+        "MiniMax AI 产品经理面试通知：恭喜您进入面试环节，请于明天下午参加业务面试。"
+    )
+
+    assert result.parsed is True
+    assert result.company == "MiniMax"
+    assert result.title == "AI 产品经理"
+    assert result.suggested_status == "interviewing"
+
+
 # ---------- 3. AIParser 无 Key 降级 ----------
 
 

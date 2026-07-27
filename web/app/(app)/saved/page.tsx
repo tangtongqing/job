@@ -25,6 +25,10 @@ export default function SavedPage() {
     () => (tab === "favorites" ? saved.data?.favorites : saved.data?.toApply) || [],
     [saved.data, tab]
   );
+  const toApplyJobIds = useMemo(
+    () => new Set((saved.data?.toApply || []).map((item) => item.job_id)),
+    [saved.data?.toApply]
+  );
 
   const remove = async (item: SavedJob) => {
     setBusyId(item.id);
@@ -142,7 +146,11 @@ export default function SavedPage() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                  {item.action_type === "favorited" ? (
+                  {item.action_type === "favorited" && toApplyJobIds.has(item.job_id) ? (
+                    <button type="button" onClick={() => setTab("to_apply")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-black/[0.08] px-4 text-xs font-medium text-foreground hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:border-white/10 dark:hover:bg-white/[0.06]">
+                      <Bookmark className="h-4 w-4" /> 查看待投递
+                    </button>
+                  ) : item.action_type === "favorited" ? (
                     <button type="button" onClick={() => moveToApply(item)} disabled={busyId === item.id} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#eef2ff] px-4 text-xs font-medium text-[#4338ca] hover:bg-[#e0e7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 dark:bg-indigo-950 dark:text-indigo-300">
                       <Bookmark className="h-4 w-4" /> 加入待投递
                     </button>
