@@ -11,7 +11,7 @@ JobPulse：面向高频求职大学生的招聘信息聚合 + 投递管理工具
 
 ---
 
-## 二、当前完成状态（截至 2026-07-22）
+## 二、当前完成状态（截至 2026-07-27）
 
 ### 线上交付—— ✅ 已公开部署
 
@@ -147,15 +147,15 @@ web/
 
 ### 后端
 
-```bash
+```powershell
 # 安装依赖
-pip install -e .
+python -m pip install -e ".[dev]"
 
 # 建表 + 种子数据
 python -m src.db.init_db
 
 # 启动
-uvicorn src.main:app --reload --port 8000
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8100 --reload
 
 # 测试
 python -m pytest
@@ -163,10 +163,10 @@ python -m pytest
 
 ### 前端
 
-```bash
-cd web
+```powershell
+Set-Location web
 npm install
-npm run dev      # 开发
+npm run dev -- --webpack --hostname 127.0.0.1 --port 3100
 npm run build    # 生产构建
 npm run lint     # 检查
 npm run build:sites  # Codex Sites 构建
@@ -174,17 +174,21 @@ npm run build:sites  # Codex Sites 构建
 
 ### 前后端联调
 
-```bash
+```powershell
 # 终端1：后端
-uvicorn src.main:app --reload --port 8000
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8100 --reload
 
 # 终端2：前端
-cd web && npm run dev
+Set-Location web
+npm run dev -- --webpack --hostname 127.0.0.1 --port 3100
 
 # 浏览器访问
-# 前端：http://localhost:3000
-# API文档：http://localhost:8000/docs
+# 前端：http://127.0.0.1:3100
+# 后端健康检查：http://127.0.0.1:8100/health
+# API文档：http://127.0.0.1:8100/docs
 ```
+
+关闭时分别在两个运行终端按 `Ctrl+C`。若终端已关闭但端口仍被占用，请按 [`docs/operations/LOCAL-DEVELOPMENT.md`](../docs/operations/LOCAL-DEVELOPMENT.md) 中的安全关闭步骤处理。
 
 ---
 

@@ -31,6 +31,8 @@ data/*.sqlite3
 logs/
 .playwright-mcp/
 output/playwright/
+output/case-study-*.png
+output/*.db
 
 # 构建产物
 dist/
