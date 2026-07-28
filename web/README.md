@@ -8,7 +8,7 @@ JobPulse 前端同时承载真实 SaaS 官网、可交互产品后台与作品�
 - `/dashboard`：求职数据看板
 - `/jobs`、`/jobs/[id]`：岗位发现与详情
 - `/saved`：收藏与待投递
-- `/applications`、`/applications/[id]`：投递流程与邮件文本解析
+- `/applications`、`/applications/[id]`：投递流程、库外投递补录与招聘通知解析
 - `/todo`：近期安排
 - `/subscriptions`：岗位订阅规则
 - `/crawler`：数据来源与采集状态
@@ -20,18 +20,20 @@ JobPulse 前端同时承载真实 SaaS 官网、可交互产品后台与作品�
 
 要求 Node.js 22.13+。
 
-```bash
+```powershell
 npm install
-npm run dev
+npm run dev -- --webpack --hostname 127.0.0.1 --port 3100
 ```
 
 如需连接本地 FastAPI，在 `.env.local` 中配置：
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8100/api/v1
 ```
 
 未配置时使用公开演示 API。
+
+本地后端默认使用 `8100` 端口。关闭前端时在运行终端按 `Ctrl+C`；完整的前后端启动与关闭说明见 [`../docs/operations/LOCAL-DEVELOPMENT.md`](../docs/operations/LOCAL-DEVELOPMENT.md)。
 
 ## 验证与构建
 
@@ -39,10 +41,12 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
 npm run lint
 npm run build
 npm run build:sites
+node scripts/role-walkthrough-26.mjs
 ```
 
 - `npm run build`：Next.js 生产构建，Windows 中文路径下固定使用 Webpack，规避 Turbopack 路径问题。
 - `npm run build:sites`：生成 Codex Sites 所需的 Cloudflare Worker 兼容产物。
+- `node scripts/role-walkthrough-26.mjs`：在本地生产前后端运行时，复测四类角色的 26 项预设结果。
 
 ## 技术结构
 

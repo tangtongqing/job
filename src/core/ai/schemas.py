@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, field_validator
 
 
@@ -22,6 +24,7 @@ class ParsedEmailResult(BaseModel):
     company: str | None = None
     title: str | None = None
     suggested_status: str | None = None
+    interview_time: datetime | None = None
     confidence: float = 0.0
     degraded: bool = False
     matched_application_id: int | None = None

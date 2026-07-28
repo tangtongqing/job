@@ -34,7 +34,7 @@
 
 | 项目 | 值 |
 |------|-----|
-| Base URL | `http://localhost:8000/api/v1` |
+| Base URL | `http://127.0.0.1:8100/api/v1` |
 | 内容类型 | `application/json` |
 | 字符集 | UTF-8 |
 
@@ -415,6 +415,35 @@ GET /api/v1/jobs?page=1&page_size=10&company=字节跳动&is_intern=true
 
 ---
 
+#### POST /applications/manual — 补录岗位库外投递
+
+**对应需求**：跨平台投递统一管理
+
+**请求体**：
+
+```json
+{
+  "company": "Linear",
+  "title": "Product Manager, Core Experience",
+  "location": "Remote",
+  "source_url": "https://linear.app/careers/example",
+  "applied_at": "2026-07-28T12:00:00Z",
+  "notes": "官网投递，英文简历 v3"
+}
+```
+
+`company`、`title` 必填；其余字段可选。`source_url` 必须使用 `http://` 或 `https://`。
+
+**响应**：返回新建的投递详情，关联岗位的 `source` 固定为 `manual`。
+
+**原子性保证**：
+
+- 单次请求创建手动岗位、`applied` 投递和初始状态事件；
+- 任一步失败时整次回滚，不留下孤立岗位或无时间线的投递；
+- 同一手动岗位已有非终态投递时返回 `CONFLICT`。
+
+---
+
 #### GET /applications — 投递列表
 
 **请求参数**：
@@ -526,25 +555,40 @@ GET /api/v1/jobs?page=1&page_size=10&company=字节跳动&is_intern=true
 ```json
 {
   "to_status": "interviewing",
-  "note": "收到面试邀请"
+  "note": "由招聘通知确认",
+  "scheduled_at": "2026-08-02T10:30:00+08:00",
+  "scheduled_event_type": "interview",
+  "round": 1
 }
 ```
+
+`scheduled_at` 与 `scheduled_event_type` 必须同时出现；目标状态为 `interviewing` 时事件类型必须为 `interview`，目标状态为 `test` 时必须为 `test`。
 
 **响应 Schema**：
 
 ```json
 {
   "data": {
-    "id": 1,
-    "status": "interviewing",
-    "updated_at": "2026-06-22T15:00:00Z",
+    "application": {
+      "id": 1,
+      "status": "interviewing",
+      "updated_at": "2026-08-02T02:00:00Z"
+    },
     "event": {
       "id": 3,
       "event_type": "status_change",
-      "from_status": "test",
+      "from_status": "applied",
       "to_status": "interviewing",
-      "occurred_at": "2026-06-22T15:00:00Z",
+      "occurred_at": "2026-08-02T02:00:00Z",
       "is_correction": false
+    },
+    "scheduled_event": {
+      "id": 4,
+      "event_type": "interview",
+      "scheduled_at": "2026-08-02T02:30:00Z",
+      "occurred_at": null,
+      "round": 1,
+      "note": "由招聘通知确认"
     }
   }
 }
@@ -552,10 +596,11 @@ GET /api/v1/jobs?page=1&page_size=10&company=字节跳动&is_intern=true
 
 **错误码**：
 - `INVALID_TRANSITION`：非法状态流转（含 from/to 详情）
+- `VALIDATION_ERROR`：计划时间缺少事件类型，或状态与事件类型不匹配
 - `NOT_FOUND`：投递不存在
 
 > ⚠️ **v2 补充：事务原子性保证**（呼应 TASK-006 v2 §4.1 + TASK-007 v2 §4.3）
-> - 本端点保证 **Application.status 更新 + ApplicationEvent 写入在同一事务内**，要么全部成功，要么全部回滚
+> - 本端点保证 **Application.status 更新 + 状态事件 + 可选计划事件在同一事务内**，要么全部成功，要么全部回滚
 > - 使用**应用层校验**（非悲观锁，SQLite 不支持行级锁）
 > - 前端**无需重试逻辑**——失败时数据库状态不变，可安全重试
 
@@ -750,6 +795,7 @@ POST /api/v1/applications/1/transition
     "company": "字节跳动",
     "title": "产品经理实习",
     "suggested_status": "interviewing",
+    "interview_time": "2026-08-02T10:30:00+08:00",
     "confidence": 0.92,
     "degraded": false,
     "matched_application_id": 1
@@ -763,6 +809,7 @@ POST /api/v1/applications/1/transition
     "company": "字节跳动",
     "title": null,
     "suggested_status": "interviewing",
+    "interview_time": "2026-08-02T10:30:00+08:00",
     "confidence": 0.5,
     "degraded": true,
     "matched_application_id": 1
@@ -776,6 +823,7 @@ POST /api/v1/applications/1/transition
     "company": null,
     "title": null,
     "suggested_status": null,
+    "interview_time": null,
     "confidence": 0,
     "degraded": true,
     "matched_application_id": null
@@ -795,9 +843,9 @@ POST /api/v1/applications/1/transition
 > 3. 返回最匹配的 application_id；无匹配或多个匹配时返回 `null`
 > 4. 前端拿到 `matched_application_id` 后：
 >    - 有值：展示"是否更新这家公司的投递状态？"供用户确认
->    - 为 null：让用户手动从列表中选择对应的投递
+>    - 为 null：在投递详情页使用当前投递作为确认对象，不允许解析结果自行新建未知投递
 >
-> **重要**：解析结果仅作**建议**，最终流转必须用户确认（防止 AI 误判污染数据）。
+> **重要**：解析结果仅作**建议**，最终流转必须用户确认；存在明确计划时间时，确认操作会把状态事件和计划事件一起写入（防止 AI 误判或部分写入污染数据）。
 
 ---
 

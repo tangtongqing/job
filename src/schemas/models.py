@@ -7,7 +7,7 @@ ORM 模型 → schema 用 from_attributes=True 转换。
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ORMBase(BaseModel):
@@ -161,6 +161,32 @@ class ApplicationCreate(BaseModel):
     notes: str | None = None
 
 
+class ManualApplicationCreate(BaseModel):
+    """岗位库外投递的最小补录契约。"""
+
+    company: str = Field(..., min_length=1, max_length=200)
+    title: str = Field(..., min_length=1, max_length=200)
+    location: str | None = Field(default=None, max_length=200)
+    source_url: str | None = Field(default=None, max_length=2000)
+    applied_at: datetime | None = None
+    notes: str | None = Field(default=None, max_length=5000)
+
+    @field_validator("company", "title", "location", "source_url", "notes", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @field_validator("source_url")
+    @classmethod
+    def validate_source_url(cls, value: str | None) -> str | None:
+        if value is not None and not value.lower().startswith(("http://", "https://")):
+            raise ValueError("原始链接必须以 http:// 或 https:// 开头")
+        return value
+
+
 # 9 状态英文 code（用于 to_status 枚举校验）
 VALID_TO_STATUSES = Literal[
     "applied", "test", "interviewing", "offer_pending",
@@ -173,6 +199,32 @@ class TransitionRequest(BaseModel):
     note: str | None = None
     is_correction: bool = False
     correction_reason: str | None = None
+    scheduled_at: datetime | None = None
+    scheduled_event_type: Literal["interview", "test"] | None = None
+    round: int | None = Field(default=None, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def validate_scheduled_event(self):
+        has_time = self.scheduled_at is not None
+        has_type = self.scheduled_event_type is not None
+        if has_time != has_type:
+            raise ValueError("计划时间与计划事件类型必须同时提供")
+        if not has_time:
+            if self.round is not None:
+                raise ValueError("面试轮次必须与计划事件同时提供")
+            return self
+
+        expected_type = {
+            "interviewing": "interview",
+            "test": "test",
+        }.get(self.to_status)
+        if expected_type != self.scheduled_event_type:
+            raise ValueError("计划事件类型必须与目标状态一致")
+        if self.scheduled_event_type != "interview" and self.round is not None:
+            raise ValueError("只有面试计划可以设置轮次")
+        if self.is_correction:
+            raise ValueError("纠错流转不能同时创建计划事件")
+        return self
 
 
 class BatchTransitionRequest(BaseModel):

@@ -168,6 +168,7 @@ export interface ParseEmailResult {
   company: string | null;
   title: string | null;
   suggested_status: string | null;
+  interview_time: string | null;
   confidence: number;
   degraded: boolean;
   matched_application_id: number | null;
@@ -231,6 +232,15 @@ export interface SubscriptionPayload {
   location?: string | null;
 }
 
+export interface ManualApplicationPayload {
+  company: string;
+  title: string;
+  location?: string | null;
+  source_url?: string | null;
+  applied_at?: string | null;
+  notes?: string | null;
+}
+
 // ---------- API 方法 ----------
 
 export const api = {
@@ -291,12 +301,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ job_id, notes }),
     }),
+  createManualApplication: (payload: ManualApplicationPayload) =>
+    request<Application>("/applications/manual", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   transition: (
     id: number,
     to_status: string,
-    options?: { note?: string; is_correction?: boolean; correction_reason?: string }
+    options?: {
+      note?: string;
+      is_correction?: boolean;
+      correction_reason?: string;
+      scheduled_at?: string;
+      scheduled_event_type?: "interview" | "test";
+      round?: number;
+    }
   ) =>
-    request<{ application: Application; event: ApplicationEvent }>(
+    request<{
+      application: Application;
+      event: ApplicationEvent;
+      scheduled_event: ApplicationEvent | null;
+    }>(
       `/applications/${id}/transition`,
       {
         method: "POST",

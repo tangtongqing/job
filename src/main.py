@@ -1,7 +1,7 @@
 """JobPulse 后端入口（api-contract.md §2.1）。
 
-Base URL: http://localhost:8000/api/v1
-启动: uvicorn src.main:app --reload
+Base URL: http://127.0.0.1:8100/api/v1
+启动: python -m uvicorn src.main:app --host 127.0.0.1 --port 8100 --reload
 """
 
 from fastapi import FastAPI

@@ -31,26 +31,31 @@ JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位�
 
 要求 Python 3.10+ 与 Node.js 22.13+。
 
-```bash
+在项目根目录启动后端：
+
+```powershell
 python -m pip install -e ".[dev]"
 python -m src.db.init_db
-python -m uvicorn src.main:app --reload
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8100 --reload
 ```
 
 另开终端：
 
-```bash
-cd web
+```powershell
+Set-Location web
 npm install
-npm run dev
+npm run dev -- --webpack --hostname 127.0.0.1 --port 3100
 ```
 
 打开：
 
-- 官网：[http://localhost:3000](http://localhost:3000)
-- 产品 Demo：[http://localhost:3000/dashboard](http://localhost:3000/dashboard)
-- 案例页：[http://localhost:3000/case-study](http://localhost:3000/case-study)
-- API 文档：[http://localhost:8000/docs](http://localhost:8000/docs)
+- 官网：[http://127.0.0.1:3100](http://127.0.0.1:3100)
+- 产品 Demo：[http://127.0.0.1:3100/dashboard](http://127.0.0.1:3100/dashboard)
+- 案例页：[http://127.0.0.1:3100/case-study](http://127.0.0.1:3100/case-study)
+- 后端健康检查：[http://127.0.0.1:8100/health](http://127.0.0.1:8100/health)
+- API 文档：[http://127.0.0.1:8100/docs](http://127.0.0.1:8100/docs)
+
+关闭服务时，分别在前端和后端终端按 `Ctrl+C`。完整的首次安装、启动、验证、关闭和端口占用处理方式见 [`docs/operations/LOCAL-DEVELOPMENT.md`](docs/operations/LOCAL-DEVELOPMENT.md)。
 
 产品侧栏的“重置演示数据”需要连续点击两次确认。部署到非演示环境时，在 `.env` 中设置：
 
@@ -72,9 +77,10 @@ cd web
 npm run lint
 npm run build
 npm run build:sites
+node scripts/role-walkthrough-26.mjs
 ```
 
-当前基线：109 项后端测试通过，前端 ESLint 零错误，14 个 Next.js 路由完成 Next.js 与 Codex Sites 生产构建；线上核心流程验收通过。
+当前基线：120 项后端测试通过，前端 ESLint 零错误，14 个 Next.js 路由完成 Next.js 与 Codex Sites 生产构建；26 项专家模拟走查在修复后达到核心 19/23、边界 1/3、全部 20/26。该结果用于产品路径验收，不是用户任务完成率。
 
 ## 技术栈
 
@@ -88,7 +94,8 @@ npm run build:sites
 
 - 收藏与待投递是两种不同意图；创建投递后自动结束待投递标记。
 - 投递状态变化同时写入事件，支持时间线、漏斗、待办与纠错。
-- AI 解析只给建议，不自动改变投递状态。
+- AI 解析只给建议；明确时间经用户确认后，状态和计划事件在同一事务内写入。
+- 岗位库之外的投递可以用最小字段补录，一次建立岗位、投递和初始时间线。
 - 官网不展示虚构用户数、收入、转化、客户 Logo 或付费权益。
 
 设计基线见 [`docs/design/REDESIGN-BRIEF.md`](docs/design/REDESIGN-BRIEF.md)，API 契约见 [`docs/architecture/api-contract.md`](docs/architecture/api-contract.md)。

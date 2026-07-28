@@ -2,17 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, ChevronDown, Plus, X } from "lucide-react";
 
 import { EmptyState, ErrorState, Loading, StatusBadge, useApi } from "@/components/app/shared";
 import { useToast } from "@/components/app/toast";
-import { api, type Application } from "@/lib/api";
+import { api, type Application, type ManualApplicationPayload } from "@/lib/api";
 import { APPLICATION_STATUSES, getNextStatuses, getStatusLabel, isTerminal } from "@/lib/status-config";
 import { cn } from "@/lib/utils";
 
 type ViewFilter = "all" | "active" | "closed";
 
 export default function ApplicationsPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const applications = useApi<Application[]>(() => api.getApplications({ page: 1, page_size: 50 }));
   const [view, setView] = useState<ViewFilter>("all");
@@ -20,6 +22,16 @@ export default function ApplicationsPage() {
   const [batchStatus, setBatchStatus] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [batching, setBatching] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    company: "",
+    title: "",
+    location: "",
+    source_url: "",
+    applied_at: new Date().toISOString().slice(0, 10),
+    notes: "",
+  });
 
   const filtered = useMemo(() => {
     const items = applications.data || [];
@@ -70,6 +82,38 @@ export default function ApplicationsPage() {
     return next;
   });
 
+  const createManualApplication = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!manualForm.company.trim() || !manualForm.title.trim()) return;
+
+    setManualSaving(true);
+    const payload: ManualApplicationPayload = {
+      company: manualForm.company.trim(),
+      title: manualForm.title.trim(),
+      location: manualForm.location.trim() || null,
+      source_url: manualForm.source_url.trim() || null,
+      applied_at: manualForm.applied_at
+        ? `${manualForm.applied_at}T12:00:00`
+        : null,
+      notes: manualForm.notes.trim() || null,
+    };
+    try {
+      const response = await api.createManualApplication(payload);
+      toast("外部投递已补录，时间线已建立");
+      setManualOpen(false);
+      applications.reload();
+      router.push(`/applications/${response.data.id}`);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "外部投递补录失败", "error");
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
+  const updateManualField = (field: keyof typeof manualForm, value: string) => {
+    setManualForm((current) => ({ ...current, [field]: value }));
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -78,8 +122,104 @@ export default function ApplicationsPage() {
           <h1 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">推进投递，而不是维护表格</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">状态更新会写入时间线，并同步到看板与近期安排。</p>
         </div>
-        <Link href="/jobs" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">发现更多岗位 <ArrowRight className="h-4 w-4" /></Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setManualOpen((open) => !open)}
+            aria-expanded={manualOpen}
+            aria-controls="manual-application-form"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-black/10 bg-white px-4 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:border-white/10 dark:bg-card"
+          >
+            {manualOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {manualOpen ? "收起补录" : "补录外部投递"}
+          </button>
+          <Link href="/jobs" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">发现更多岗位 <ArrowRight className="h-4 w-4" /></Link>
+        </div>
       </header>
+
+      {manualOpen && (
+        <section
+          id="manual-application-form"
+          className="rounded-2xl border border-[#c7d2fe] bg-[#f8f9ff] p-5 dark:border-indigo-800 dark:bg-indigo-950/20"
+          aria-labelledby="manual-application-title"
+        >
+          <div className="mb-4">
+            <p className="text-xs font-medium text-[#4f46e5]">OUTSIDE THE LIBRARY</p>
+            <h2 id="manual-application-title" className="mt-1 text-lg font-semibold">补录岗位库之外的投递</h2>
+            <p className="mt-1 text-sm text-muted-foreground">公司和岗位为必填；提交后会同时建立岗位、投递和初始时间线。</p>
+          </div>
+          <form onSubmit={createManualApplication} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <ManualField label="公司" required>
+                <input
+                  value={manualForm.company}
+                  onChange={(event) => updateManualField("company", event.target.value)}
+                  required
+                  maxLength={200}
+                  placeholder="例如：Notion"
+                  className={manualInputClass}
+                />
+              </ManualField>
+              <ManualField label="岗位" required>
+                <input
+                  value={manualForm.title}
+                  onChange={(event) => updateManualField("title", event.target.value)}
+                  required
+                  maxLength={200}
+                  placeholder="例如：Product Manager"
+                  className={manualInputClass}
+                />
+              </ManualField>
+              <ManualField label="地点">
+                <input
+                  value={manualForm.location}
+                  onChange={(event) => updateManualField("location", event.target.value)}
+                  maxLength={200}
+                  placeholder="可选，例如：上海 / Remote"
+                  className={manualInputClass}
+                />
+              </ManualField>
+              <ManualField label="投递日期">
+                <input
+                  type="date"
+                  value={manualForm.applied_at}
+                  onChange={(event) => updateManualField("applied_at", event.target.value)}
+                  className={manualInputClass}
+                />
+              </ManualField>
+            </div>
+            <ManualField label="原始岗位链接">
+              <input
+                type="url"
+                value={manualForm.source_url}
+                onChange={(event) => updateManualField("source_url", event.target.value)}
+                maxLength={2000}
+                placeholder="https://..."
+                className={manualInputClass}
+              />
+            </ManualField>
+            <ManualField label="备注">
+              <textarea
+                value={manualForm.notes}
+                onChange={(event) => updateManualField("notes", event.target.value)}
+                maxLength={5000}
+                placeholder="可选，例如投递渠道、联系人或简历版本"
+                className={`${manualInputClass} min-h-24 resize-y py-3`}
+              />
+            </ManualField>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={manualSaving || !manualForm.company.trim() || !manualForm.title.trim()}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#4338ca] px-5 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366f1] disabled:opacity-50"
+              >
+                {manualSaving ? "正在建立记录…" : "建立投递记录"}
+              </button>
+              <span className="text-xs text-muted-foreground">不会触发自动投递，也不会修改外部平台。</span>
+            </div>
+          </form>
+        </section>
+      )}
 
       <section className="overflow-x-auto rounded-2xl border border-black/[0.07] bg-white px-5 py-6 dark:border-white/10 dark:bg-card" aria-label="投递状态概览">
         <div className="relative mx-auto flex min-w-[680px] items-start justify-between">
@@ -153,6 +293,28 @@ export default function ApplicationsPage() {
 
 function FilterTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button type="button" role="tab" aria-selected={active} onClick={onClick} className={cn("min-h-10 rounded-lg px-4 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent", active ? "bg-[#171719] font-medium text-white dark:bg-white dark:text-black" : "text-muted-foreground hover:text-foreground")}>{children}</button>;
+}
+
+const manualInputClass = "min-h-11 w-full rounded-lg border border-black/10 bg-white px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/15 dark:border-white/10 dark:bg-background";
+
+function ManualField({
+  label,
+  required = false,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-foreground">
+        {label}
+        {required && <span className="ml-1 text-[#4f46e5]">*</span>}
+      </span>
+      {children}
+    </label>
+  );
 }
 
 function formatDate(value: string) { return value.slice(0, 16).replace("T", " "); }

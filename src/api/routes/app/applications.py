@@ -27,6 +27,7 @@ from src.db.models import (
 from src.schemas.models import (
     ApplicationOut,
     ApplicationCreate,
+    ManualApplicationCreate,
     ApplicationEventOut,
     TransitionRequest,
     BatchTransitionRequest,
@@ -40,6 +41,7 @@ from src.api.responses import (
     ValidationError,
 )
 from src.core import statemachine as sm
+from src.core.events import add_interview, add_test
 from src.core.statemachine import get_history
 
 router = APIRouter(prefix="/applications", tags=["applications"])
@@ -95,6 +97,99 @@ def list_applications(
     return make_paginated(result, page, page_size, total)
 
 
+def _create_application_record(
+    db: Session,
+    job: Job,
+    *,
+    applied_at: datetime,
+    notes: str | None,
+) -> Application:
+    """在当前事务中创建投递和初始事件，并结束待投递标记。"""
+    existing = db.scalar(
+        select(Application).where(
+            Application.job_id == job.id,
+            ~Application.status.in_(list(TERMINAL_STATUSES)),
+        )
+    )
+    if existing:
+        raise ConflictError(f"Job {job.id} 已有进行中的投递 (id={existing.id})")
+
+    app = Application(
+        job_id=job.id,
+        status=APP_APPLIED,
+        applied_at=applied_at,
+        updated_at=applied_at,
+        notes=notes,
+    )
+    db.add(app)
+    db.flush()
+    db.add(
+        ApplicationEvent(
+            application_id=app.id,
+            event_type=EVT_STATUS_CHANGE,
+            from_status=None,
+            to_status=APP_APPLIED,
+            occurred_at=applied_at,
+            is_correction=False,
+        )
+    )
+
+    pending_actions = db.scalars(
+        select(UserJobAction).where(
+            UserJobAction.job_id == job.id,
+            UserJobAction.action_type == ACTION_TO_APPLY,
+            UserJobAction.ended_at.is_(None),
+        )
+    ).all()
+    for action in pending_actions:
+        action.ended_at = applied_at
+    return app
+
+
+@router.post("/manual", status_code=201)
+def create_manual_application(
+    payload: ManualApplicationCreate,
+    db: Session = Depends(get_db),
+):
+    """原子补录岗位库外的岗位、投递与初始时间线。"""
+    job_query = select(Job).where(
+        Job.source == "manual",
+        Job.company == payload.company,
+        Job.title == payload.title,
+    )
+    if payload.location is None:
+        job_query = job_query.where(Job.location.is_(None))
+    else:
+        job_query = job_query.where(Job.location == payload.location)
+    job = db.scalar(job_query)
+
+    if job is None:
+        job = Job(
+            company=payload.company,
+            title=payload.title,
+            location=payload.location,
+            apply_url=payload.source_url,
+            source="manual",
+            source_url=payload.source_url,
+        )
+        db.add(job)
+        db.flush()
+    elif payload.source_url:
+        # 复用已结束的手动岗位时，用本次补录的来源链接更新缺失字段。
+        job.source_url = payload.source_url
+        job.apply_url = payload.source_url
+
+    app = _create_application_record(
+        db,
+        job,
+        applied_at=payload.applied_at or datetime.utcnow(),
+        notes=payload.notes,
+    )
+    db.commit()
+    db.refresh(app)
+    return {"data": ApplicationOut.model_validate(app).model_dump()}
+
+
 @router.post("", status_code=201)
 def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)):
     """创建投递记录（初始状态 applied）+ 写初始 applied 事件。"""
@@ -102,42 +197,13 @@ def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)
     if not job:
         raise NotFoundError(f"Job {payload.job_id} not found")
 
-    # 检查是否已有非终态投递
-    existing = db.scalar(
-        select(Application).where(
-            Application.job_id == payload.job_id,
-            ~Application.status.in_(list(TERMINAL_STATUSES)),
-        )
-    )
-    if existing:
-        raise ConflictError(f"Job {payload.job_id} 已有进行中的投递 (id={existing.id})")
-
     now = datetime.utcnow()
-    app = Application(job_id=payload.job_id, status=APP_APPLIED, applied_at=now, updated_at=now, notes=payload.notes)
-    db.add(app)
-    db.flush()  # 拿 id
-
-    # 初始 applied 事件（与 Application 同事务）
-    event = ApplicationEvent(
-        application_id=app.id,
-        event_type=EVT_STATUS_CHANGE,
-        from_status=None,
-        to_status=APP_APPLIED,
-        occurred_at=now,
-        is_correction=False,
+    app = _create_application_record(
+        db,
+        job,
+        applied_at=now,
+        notes=payload.notes,
     )
-    db.add(event)
-
-    # 创建真实投递后，待投递标记结束；收藏状态保持不变。
-    pending_actions = db.scalars(
-        select(UserJobAction).where(
-            UserJobAction.job_id == payload.job_id,
-            UserJobAction.action_type == ACTION_TO_APPLY,
-            UserJobAction.ended_at.is_(None),
-        )
-    ).all()
-    for action in pending_actions:
-        action.ended_at = now
 
     db.commit()
     db.refresh(app)
@@ -195,20 +261,54 @@ def transition_application(
     except sm.CorrectionValidationError as e:
         raise ValidationError(str(e))
 
-    db.refresh(app)
+    # Session 关闭 autoflush，先 flush 才能准确读取本次状态事件；仍未提交。
+    db.flush()
 
     # 查本次写入的事件（最新一条 status_change 或 correction）
     latest_event = db.scalars(
         select(ApplicationEvent)
-        .where(ApplicationEvent.application_id == app_id)
+        .where(
+            ApplicationEvent.application_id == app_id,
+            ApplicationEvent.event_type.in_(["status_change", "correction"]),
+        )
         .order_by(ApplicationEvent.id.desc())
         .limit(1)
     ).first()
+
+    scheduled_event = None
+    if payload.scheduled_at and payload.scheduled_event_type == "interview":
+        scheduled_event = add_interview(
+            db,
+            app_id,
+            round=payload.round,
+            scheduled_at=payload.scheduled_at,
+            note=payload.note,
+        )
+    elif payload.scheduled_at and payload.scheduled_event_type == "test":
+        scheduled_event = add_test(
+            db,
+            app_id,
+            scheduled_at=payload.scheduled_at,
+            note=payload.note,
+        )
+
+    # 状态事件与计划事件在同一事务中提交。
+    db.commit()
+    db.refresh(app)
+    if latest_event:
+        db.refresh(latest_event)
+    if scheduled_event:
+        db.refresh(scheduled_event)
 
     return {
         "data": {
             "application": ApplicationOut.model_validate(app).model_dump(),
             "event": ApplicationEventOut.model_validate(latest_event).model_dump() if latest_event else None,
+            "scheduled_event": (
+                ApplicationEventOut.model_validate(scheduled_event).model_dump()
+                if scheduled_event
+                else None
+            ),
         }
     }
 
@@ -315,6 +415,7 @@ async def parse_email(payload: ParseEmailRequest, db: Session = Depends(get_db))
         "company": result.company,
         "title": result.title,
         "suggested_status": result.suggested_status,
+        "interview_time": result.interview_time,
         "confidence": result.confidence,
         "degraded": result.degraded,
         "matched_application_id": matched_id,

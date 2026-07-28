@@ -1,8 +1,8 @@
 """状态机引擎（database-schema.md §4.3）。
 
-核心：状态流转的事务实现。
-- 读取 + 校验 + 写入在同一事务（database-schema v2 关键修正）
-- Application.status 更新 + ApplicationEvent 写入原子提交
+核心：状态流转的领域写入。
+- 读取 + 校验 + 写入使用调用方提供的同一 Session
+- Application.status 更新 + ApplicationEvent 写入由用例层原子提交
 - SQLite 用应用层校验代替悲观锁（SQLite 不支持 SELECT FOR UPDATE）
 """
 
@@ -15,7 +15,6 @@ from src.db.models import (
     ApplicationEvent,
     EVT_STATUS_CHANGE,
     EVT_CORRECTION,
-    is_terminal,
 )
 from src.core.statemachine.transitions import is_valid_transition
 
@@ -47,9 +46,10 @@ def transition(
     is_correction: bool = False,
     correction_reason: str | None = None,
 ) -> Application:
-    """状态流转（原子操作）。
+    """写入状态流转，事务提交或回滚由调用方负责。
 
-    database-schema §4.3 v2 关键：读取 + 校验 + 写入在同一事务内。
+    database-schema §4.3 v2 关键：状态与事件使用同一 Session，调用方可以
+    继续附加计划事件后一次提交，任何一步失败时整体回滚。
 
     Args:
         session: SQLAlchemy Session
@@ -65,33 +65,30 @@ def transition(
     Raises:
         ApplicationNotFoundError / InvalidTransitionError / CorrectionValidationError
     """
-    app = None
     event_type = EVT_CORRECTION if is_correction else EVT_STATUS_CHANGE
 
-    # v2 关键：整个流程在事务内
-    with session.begin_nested() if session.in_transaction() else session.begin():
-        # 1. 读取当前状态（事务内，SQLite 数据库级锁保证一致性）
-        app = session.query(Application).get(application_id)
-        if app is None:
-            raise ApplicationNotFoundError(application_id)
-        from_status = app.status
+    # 1. 读取当前状态。SQLite 不支持 SELECT FOR UPDATE，由应用层校验约束流转。
+    app = session.get(Application, application_id)
+    if app is None:
+        raise ApplicationNotFoundError(application_id)
+    from_status = app.status
 
-        # 2. 应用层校验
-        if is_correction:
-            if not correction_reason:
-                raise CorrectionValidationError("纠错必须填写原因")
-            # 纠错允许任意流转（包括终态回流），不校验 TRANSITIONS
-        else:
-            if not is_valid_transition(from_status, to_status):
-                raise InvalidTransitionError(from_status, to_status)
+    # 2. 应用层校验
+    if is_correction:
+        if not correction_reason:
+            raise CorrectionValidationError("纠错必须填写原因")
+        # 纠错允许任意流转（包括终态回流），不校验 TRANSITIONS
+    elif not is_valid_transition(from_status, to_status):
+        raise InvalidTransitionError(from_status, to_status)
 
-        # 3. 更新 Application
-        now = datetime.utcnow()
-        app.status = to_status
-        app.updated_at = now
+    # 3. 更新 Application
+    now = datetime.utcnow()
+    app.status = to_status
+    app.updated_at = now
 
-        # 4. 写入 ApplicationEvent（同一事务，原子提交）
-        event = ApplicationEvent(
+    # 4. 写入 ApplicationEvent。这里不 commit，便于用例层附加事件后统一提交。
+    session.add(
+        ApplicationEvent(
             application_id=application_id,
             event_type=event_type,
             from_status=from_status,
@@ -101,7 +98,7 @@ def transition(
             correction_reason=correction_reason,
             note=note,
         )
-        session.add(event)
+    )
 
     return app
 

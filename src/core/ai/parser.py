@@ -207,6 +207,7 @@ class AIParser:
             company=data.get("company"),
             title=data.get("title"),
             suggested_status=status,
+            interview_time=data.get("interview_time"),
             confidence=confidence,
             degraded=False,
             reasoning=data.get("reasoning"),

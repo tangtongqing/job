@@ -34,13 +34,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       title,
       description,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "JobPulse 产品预览" }],
+      images: [{ url: "/og-case-study-v2.png", width: 1734, height: 908, alt: "JobPulse 产品案例：19 条公开记录、26 项走查、2 个核心断点关闭" }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/og.png"],
+      images: ["/og-case-study-v2.png"],
     },
   };
 }

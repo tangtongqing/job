@@ -41,10 +41,31 @@ export default function ApplicationDetailPage() {
   const handleConfirmTransition = async () => {
     if (!parseResult?.suggested_status) return;
     const targetId = parseResult.matched_application_id ?? appId;
+    const scheduledEventType =
+      parseResult.suggested_status === "interviewing"
+        ? "interview"
+        : parseResult.suggested_status === "test"
+          ? "test"
+          : null;
+    const shouldCreateSchedule = Boolean(
+      parseResult.interview_time && scheduledEventType
+    );
     setConfirming(true);
     try {
-      await api.transition(targetId, parseResult.suggested_status);
-      setFeedback("状态已更新！");
+      await api.transition(targetId, parseResult.suggested_status, {
+        note: shouldCreateSchedule ? "由招聘通知确认" : undefined,
+        scheduled_at: shouldCreateSchedule
+          ? parseResult.interview_time || undefined
+          : undefined,
+        scheduled_event_type: shouldCreateSchedule
+          ? scheduledEventType || undefined
+          : undefined,
+      });
+      setFeedback(
+        shouldCreateSchedule
+          ? "状态已更新，计划时间已加入近期安排。"
+          : "状态已更新！"
+      );
       setParseResult(null);
       setEmailText("");
       reload();
@@ -180,6 +201,12 @@ export default function ApplicationDetailPage() {
                   label="匹配投递"
                   value={parseResult.matched_application_id ? `#${parseResult.matched_application_id}` : `当前投递 #${appId}`}
                 />
+                {parseResult.interview_time && (
+                  <Field
+                    label="计划时间"
+                    value={formatDateTime(parseResult.interview_time)}
+                  />
+                )}
                 {parseResult.reasoning && (
                   <div className="col-span-2">
                     <span className="text-xs text-muted-foreground">依据</span>
@@ -195,7 +222,7 @@ export default function ApplicationDetailPage() {
             <div className="flex items-start gap-2 rounded bg-yellow-50 dark:bg-yellow-900/20 p-2">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
               <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                AI 结果仅为建议，确认后才会更新状态。
+                AI 结果仅为建议，确认后才会更新状态并写入明确的计划时间。
               </p>
             </div>
             {!parseResult.matched_application_id && (
@@ -211,7 +238,9 @@ export default function ApplicationDetailPage() {
                 disabled={confirming}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {confirming ? "更新中..." : `确认将投递 #${parseResult.matched_application_id ?? appId} 流转到「${getStatusLabel(parseResult.suggested_status)}」`}
+                {confirming
+                  ? "更新中..."
+                  : `确认将投递 #${parseResult.matched_application_id ?? appId} 流转到「${getStatusLabel(parseResult.suggested_status)}」${parseResult.interview_time ? "并加入近期安排" : ""}`}
               </button>
             )}
           </div>

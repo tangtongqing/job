@@ -3,7 +3,8 @@
 > 阶段 2 地基产出。本文档明确分层、技术选型细化、部署拓扑、目录结构落地，可直接指导 TASK-007~011。
 >
 > ---
-> **版本**：v3（v4 愿景校准版）
+> **版本**：v3.1（v4 愿景校准版）
+> **v3.1 修订说明**（2026-07-27）：统一当前本地开发端口为前端 `3100`、后端 `8100`，并补充 Webpack 启动约束及本地运行手册。
 > **v3 修订说明**（2026-06-24，配合 PROJECT.md v4「双面产品+演进蓝图」愿景）：
 > 1. **新增 §九「演进预留」章节**：定义 M0→M1 的架构接缝（多租户、API 三层命名空间、鉴权占位、采集合规、AI 配额）。这些在 M0 **只做注释/命名/抽象层**，不写死代码，但让 M1 升级是"增量"而非"重构"。
 > 2. **§3.1 目录结构补全营销面路由**：`/`（落地页）、`/pricing`（定价页）属 brand register，与产品面路由并列。
@@ -601,7 +602,7 @@ class AIParser:
 │                                                         │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐ │
 │  │  Next.js    │    │  FastAPI    │    │  APScheduler│ │
-│  │  (Port 3000)│───▶│  (Port 8000)│    │  (内嵌)     │ │
+│  │  (Port 3100)│───▶│  (Port 8100)│    │  (内嵌)     │ │
 │  └─────────────┘    └──────┬──────┘    └──────┬──────┘ │
 │                            │                   │        │
 │                            ▼                   ▼        │
@@ -611,27 +612,30 @@ class AIParser:
 │                     └─────────────┘    └─────────────┘ │
 │                                                         │
 │  启动方式：                                              │
-│  1. 后端：uvicorn src.main:app --reload                  │
-│  2. 前端：npm run dev                                    │
+│  1. 后端：uvicorn（Port 8100）                            │
+│  2. 前端：Next.js + Webpack（Port 3100）                 │
 │  3. 采集：APScheduler 自动运行（内嵌在 FastAPI 进程中）    │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **启动命令**：
 
-```bash
+```powershell
 # 后端
-cd 招聘信息搜集系统
-uvicorn src.main:app --reload --port 8000
+Set-Location 招聘信息搜集系统
+python -m uvicorn src.main:app --host 127.0.0.1 --port 8100 --reload
 
 # 前端
-cd 招聘信息搜集系统/web
-npm run dev
+Set-Location web
+npm run dev -- --webpack --hostname 127.0.0.1 --port 3100
 
 # 访问
-# 前端：http://localhost:3000
-# API 文档：http://localhost:8000/docs
+# 前端：http://127.0.0.1:3100
+# 后端健康检查：http://127.0.0.1:8100/health
+# API 文档：http://127.0.0.1:8100/docs
 ```
+
+分别在前端和后端运行终端按 `Ctrl+C` 即可关闭服务。完整运行手册见 [`docs/operations/LOCAL-DEVELOPMENT.md`](../operations/LOCAL-DEVELOPMENT.md)。
 
 **SQLite 文件位置**：
 - 开发环境：`data/jobpulse.db`
@@ -922,4 +926,4 @@ async def auth_middleware(request: Request, call_next):
 
 ---
 
-*文档版本：v3 | 最后更新：2026-06-24 | 上游：PROJECT.md v4 | 演进细节：evolution-roadmap.md*
+*文档版本：v3.1 | 最后更新：2026-07-27 | 上游：PROJECT.md v4 | 演进细节：evolution-roadmap.md*

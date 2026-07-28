@@ -4,6 +4,8 @@
 """
 
 import asyncio
+from datetime import datetime
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -75,6 +77,20 @@ def test_regex_parser_extracts_demo_company_and_job_title():
     assert result.suggested_status == "interviewing"
 
 
+def test_regex_parser_extracts_explicit_schedule_time():
+    """降级解析只提取同时包含日期与钟点的计划时间。"""
+    result = RegexParser().parse(
+        "MiniMax AI 产品经理面试邀请：请于 2026年8月2日下午2:30 参加视频面试。"
+    )
+
+    assert result.interview_time == datetime(2026, 8, 2, 14, 30)
+
+    missing_clock = RegexParser().parse(
+        "MiniMax AI 产品经理面试邀请：请于 2026年8月2日 参加视频面试。"
+    )
+    assert missing_clock.interview_time is None
+
+
 # ---------- 3. AIParser 无 Key 降级 ----------
 
 
@@ -104,6 +120,7 @@ def test_ai_parser_llm_success():
         async def call(self, sys_prompt, user_text):
             return '''{"parsed": true, "company": "字节跳动", "title": "产品经理",
             "suggested_status": "interviewing", "confidence": 0.92,
+            "interview_time": "2026-08-02T10:00:00",
             "reasoning": "通过笔试邀请面试"}'''
 
     parser = AIParser(api_key="fake-key", client=FakeClient())
@@ -112,6 +129,7 @@ def test_ai_parser_llm_success():
     assert result.degraded is False
     assert result.confidence == 0.92
     assert result.company == "字节跳动"
+    assert result.interview_time == datetime(2026, 8, 2, 10, 0)
 
 
 # ---------- 5. LLM 异常降级 ----------
@@ -276,7 +294,7 @@ def test_api_parse_email_response_shape(client):
 
     class FakeLLM:
         async def call(self, sys, user):
-            return '{"parsed": true, "company": "字节跳动", "title": "产品经理", "suggested_status": "interviewing", "confidence": 0.92, "reasoning": "面试"}'
+            return '{"parsed": true, "company": "字节跳动", "title": "产品经理", "suggested_status": "interviewing", "interview_time": "2026-08-02T10:00:00", "confidence": 0.92, "reasoning": "面试"}'
 
     parser = AIParser(api_key="fake", client=FakeLLM())
     set_ai_parser_for_testing(parser)
@@ -284,8 +302,9 @@ def test_api_parse_email_response_shape(client):
         r = client.post("/api/v1/applications/parse-email", json={"email_text": "字节跳动面试邀请"})
         assert r.status_code == 200
         data = r.json()["data"]
-        for field in ["parsed", "company", "title", "suggested_status", "confidence", "degraded", "matched_application_id", "reasoning"]:
+        for field in ["parsed", "company", "title", "suggested_status", "interview_time", "confidence", "degraded", "matched_application_id", "reasoning"]:
             assert field in data
+        assert data["interview_time"] == "2026-08-02T10:00:00"
     finally:
         set_ai_parser_for_testing(None)
 

@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+import re
+from datetime import datetime, timedelta
+
 from src.core.ai.schemas import ParsedEmailResult
 
 # 公司关键词（按长度降序，优先匹配长名）
@@ -103,6 +106,77 @@ def _match_title(text: str) -> str | None:
     return None
 
 
+_ABSOLUTE_DATETIME_PATTERN = re.compile(
+    r"(?:(?P<year>\d{4})[年/\-.])?"
+    r"(?P<month>\d{1,2})[月/\-.]"
+    r"(?P<day>\d{1,2})日?"
+    r"\s*(?P<period>上午|下午|晚上|中午)?\s*"
+    r"(?P<hour>\d{1,2})(?:[:：点时](?P<minute>\d{1,2}))?(?:分)?"
+)
+_RELATIVE_DATETIME_PATTERN = re.compile(
+    r"(?P<relative>今天|明天|后天)"
+    r"\s*(?P<period>上午|下午|晚上|中午)?\s*"
+    r"(?P<hour>\d{1,2})(?:[:：点时](?P<minute>\d{1,2}))?(?:分)?"
+)
+
+
+def _normalize_hour(period: str | None, hour: int) -> int:
+    if period in {"下午", "晚上"} and hour < 12:
+        return hour + 12
+    if period == "中午" and hour < 11:
+        return hour + 12
+    if period == "上午" and hour == 12:
+        return 0
+    return hour
+
+
+def _match_scheduled_time(text: str, now: datetime | None = None) -> datetime | None:
+    """提取明确的面试/测评时间；缺少日期或钟点时不推测。"""
+    now = now or datetime.now()
+
+    absolute = _ABSOLUTE_DATETIME_PATTERN.search(text)
+    if absolute:
+        values = absolute.groupdict()
+        year = int(values["year"]) if values["year"] else now.year
+        hour = _normalize_hour(values["period"], int(values["hour"]))
+        minute = int(values["minute"] or 0)
+        try:
+            result = datetime(
+                year,
+                int(values["month"]),
+                int(values["day"]),
+                hour,
+                minute,
+            )
+        except ValueError:
+            return None
+
+        # 未写年份时，只在日期明显跨年后才顺延，避免把刚过去的通知擅自改到下一年。
+        if not values["year"] and result < now - timedelta(days=30):
+            try:
+                result = result.replace(year=year + 1)
+            except ValueError:
+                return None
+        return result
+
+    relative = _RELATIVE_DATETIME_PATTERN.search(text)
+    if relative:
+        values = relative.groupdict()
+        day_offset = {"今天": 0, "明天": 1, "后天": 2}[values["relative"]]
+        hour = _normalize_hour(values["period"], int(values["hour"]))
+        minute = int(values["minute"] or 0)
+        try:
+            target_date = (now + timedelta(days=day_offset)).date()
+            return datetime.combine(target_date, datetime.min.time()).replace(
+                hour=hour,
+                minute=minute,
+            )
+        except ValueError:
+            return None
+
+    return None
+
+
 class RegexParser:
     """正则降级解析器。"""
 
@@ -114,6 +188,11 @@ class RegexParser:
         company = _match_company(text)
         title = _match_title(text)
         status, hits = _match_status(text)
+        interview_time = (
+            _match_scheduled_time(text)
+            if status in {"interviewing", "test"}
+            else None
+        )
 
         if not company and not title and not status:
             return ParsedEmailResult(parsed=False, degraded=True)
@@ -125,12 +204,17 @@ class RegexParser:
             reasoning_parts.append(f"岗位匹配：{title}")
         if hits:
             reasoning_parts.append(f"关键词匹配：{'+'.join(hits)}")
+        if interview_time:
+            reasoning_parts.append(
+                f"计划时间：{interview_time.strftime('%Y-%m-%d %H:%M')}"
+            )
 
         return ParsedEmailResult(
             parsed=True,
             company=company,
             title=title,
             suggested_status=status,
+            interview_time=interview_time,
             confidence=0.5,
             degraded=True,
             reasoning="；".join(reasoning_parts) if reasoning_parts else None,
