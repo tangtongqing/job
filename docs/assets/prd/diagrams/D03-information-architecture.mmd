@@ -1,0 +1,11 @@
+flowchart LR
+    NAV["产品导航"]
+    NAV --> D["/dashboard 求职概览"]
+    NAV --> J["/jobs 发现岗位"]
+    J --> JD["/jobs/:id 岗位详情"]
+    NAV --> S["/saved 收藏与待投递"]
+    NAV --> A["/applications 投递进展"]
+    A --> AD["/applications/:id 投递详情"]
+    NAV --> T["/todo 近期安排"]
+    NAV --> SUB["/subscriptions 岗位订阅"]
+    NAV --> C["/crawler 数据与采集"]

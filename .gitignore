@@ -30,9 +30,13 @@ data/*.sqlite3
 *.log
 logs/
 .playwright-mcp/
-output/playwright/
-output/case-study-*.png
-output/*.db
+.pytest_cache/
+
+# 本地验收与代理过程产物
+output/
+.agent-ops/
+.codegraph/
+.tmp/
 
 # 构建产物
 dist/

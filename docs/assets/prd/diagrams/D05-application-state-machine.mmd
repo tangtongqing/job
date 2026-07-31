@@ -1,0 +1,21 @@
+stateDiagram-v2
+    [*] --> APPLIED: 创建投递
+    APPLIED --> TEST: 收到测评/笔试
+    APPLIED --> INTERVIEW: 直接面试
+    APPLIED --> OFFER_PENDING: 直接收到 Offer
+    TEST --> INTERVIEW: 测评通过
+    TEST --> OFFER_PENDING: 直接收到 Offer
+    INTERVIEW --> INTERVIEW: 下一轮面试
+    INTERVIEW --> OFFER_PENDING: 收到 Offer
+    OFFER_PENDING --> ACCEPTED: 接受
+    OFFER_PENDING --> DECLINED: 婉拒
+    APPLIED --> REJECTED: 公司拒绝
+    TEST --> REJECTED: 公司拒绝
+    INTERVIEW --> REJECTED: 公司拒绝
+    APPLIED --> NO_RESPONSE: 用户确认无回应
+    TEST --> NO_RESPONSE: 用户确认无回应
+    INTERVIEW --> NO_RESPONSE: 用户确认无回应
+    APPLIED --> WITHDRAWN: 主动撤回
+    TEST --> WITHDRAWN: 主动撤回
+    INTERVIEW --> WITHDRAWN: 主动撤回
+    OFFER_PENDING --> WITHDRAWN: 主动撤回

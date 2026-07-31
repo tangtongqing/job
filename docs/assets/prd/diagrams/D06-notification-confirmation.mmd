@@ -1,0 +1,21 @@
+sequenceDiagram
+    actor U as 用户
+    participant UI as 投递详情
+    participant P as 解析服务
+    participant S as 状态机
+    participant DB as 事件存储
+    U->>UI: 粘贴通知并点击解析
+    UI->>P: 发送通知文本
+    P-->>UI: 建议状态、时间、置信度、匹配结果
+    UI-->>U: 展示建议与确认边界
+    alt 用户取消或不确认
+        UI-->>U: 不改变业务数据
+    else 用户确认
+        UI->>S: 请求合法状态流转
+        S->>DB: 同一事务写状态事件
+        opt 含明确时间且类型一致
+            S->>DB: 同一事务写计划事件
+        end
+        DB-->>UI: 返回状态与计划事件
+        UI-->>U: 时间线和近期安排同步可见
+    end

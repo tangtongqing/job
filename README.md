@@ -2,6 +2,22 @@
 
 JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位、收藏决策、投递状态和近期安排收进同一个求职工作台。
 
+## 文档入口
+
+产品文档使用固定文件名，统一从 [`docs/README.md`](docs/README.md) 查找：
+
+| 文档 | 入口 |
+|---|---|
+| 项目章程 / BRD | [`docs/product/PROJECT-CHARTER.md`](docs/product/PROJECT-CHARTER.md) |
+| MRD | [`docs/product/MRD.md`](docs/product/MRD.md) |
+| PRD | [`docs/product/PRD.md`](docs/product/PRD.md) / [`PRD.docx`](docs/product/PRD.docx) |
+| Figma 高保真原型 | [`docs/design/HIGH-FIDELITY-PROTOTYPE-INDEX.md`](docs/design/HIGH-FIDELITY-PROTOTYPE-INDEX.md) |
+| 用户画像 | [`docs/product/PERSONAS.md`](docs/product/PERSONAS.md) |
+| JTBD | [`docs/product/JTBD.md`](docs/product/JTBD.md) |
+| 路线图 | [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) |
+| 系统架构 | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) |
+| 当前验收报告 | [`docs/qa/ACCEPTANCE-REPORT.md`](docs/qa/ACCEPTANCE-REPORT.md) |
+
 ## 在线体验
 
 - SaaS 官网：<https://jobpulse-product-demo.tongqtang.chatgpt.site>
@@ -89,6 +105,18 @@ node scripts/role-walkthrough-26.mjs
 - 数据采集：httpx、Playwright、APScheduler
 - 演示视频：Playwright 自动操作真实产品并录制 WebM
 - 部署：Codex Sites（公开前端）+ Railway（FastAPI 与 SQLite 持久化卷）
+
+## 项目结构
+
+```text
+src/       FastAPI 后端与领域逻辑
+web/       Next.js 官网、产品后台与案例页
+tests/     后端自动化测试
+config/    岗位采集源配置
+docs/      产品、研究、设计、架构、工程、验收与作品集文档
+data/      本地运行数据（不纳入版本控制）
+output/    可再生成的验收与构建产物（不纳入版本控制）
+```
 
 ## 关键设计约束
 
