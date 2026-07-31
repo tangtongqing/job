@@ -9,22 +9,22 @@
 
 | # | 页面 | 截图路径 | 本次实测动作 |
 |---|---|---|---|
-| 1 | 工作台 Dashboard | `.agent-ops/offerbiu-screens/dashboard.png` | 浏览公开演示数据 |
-| 2 | 我的投递看板 | `.agent-ops/offerbiu-screens/jobs.png` | 浏览状态列、搜索、筛选入口 |
-| 3 | 投递卡片展开态 | `offerbiu-jobs-expanded.png` | 展开岗位卡片，观察详情字段 |
-| 4 | 校招信息库 | `.agent-ops/offerbiu-screens/companies.png` | 浏览岗位库筛选、分页、加入投递入口 |
-| 5 | 添加岗位 | `.agent-ops/offerbiu-screens/job-new.png` | 查看手动录入字段和 AI 解析入口 |
-| 6 | 简历管理 | `.agent-ops/offerbiu-screens/resumes.png` | 查看多版本简历、文件、绑定岗位、优化记录 |
-| 7 | 简历制作 | `.agent-ops/offerbiu-screens/resume-builder.png` | 查看结构化简历编辑器和实时预览 |
-| 8 | 自动填充 | `.agent-ops/offerbiu-screens/resume-autofill.png` | 查看网申信息库/自动填充资料页 |
-| 9 | AI 匹配 | `.agent-ops/offerbiu-screens/ai-match.png` | 查看简历+岗位/JD 的匹配分析入口 |
-| 10 | AI 匹配登录门槛 | `.agent-ops/offerbiu-screens/ai-match-login-gate.png` | 点击“生成分析”，确认需登录 |
-| 11 | 简历优化 | `.agent-ops/offerbiu-screens/resume-optimize.png` | 查看匹配详情、短板、建议、关键词证据 |
-| 12 | 简历优化登录门槛 | `.agent-ops/offerbiu-screens/resume-optimize-login-gate.png` | 点击“生成全量优化”，确认需登录 |
-| 13 | 投递复盘 | `.agent-ops/offerbiu-screens/review.png` | 查看周复盘、阶段分布、行动建议 |
-| 14 | 个人中心 | `.agent-ops/offerbiu-screens/profile.png` | 查看账号额度、历史报告、会员状态 |
-| 15 | 会员中心 | `.agent-ops/offerbiu-screens/pricing.png` | 查看免费/VIP/SVIP 功能边界 |
-| 16 | 免费福利 | `.agent-ops/offerbiu-screens/free-benefits.png` | 查看邀请积分、兑换会员码 |
+| 1 | 工作台 Dashboard | [`dashboard.png`](../assets/research/offerbiu/dashboard.png) | 浏览公开演示数据 |
+| 2 | 我的投递看板 | [`jobs.png`](../assets/research/offerbiu/jobs.png) | 浏览状态列、搜索、筛选入口 |
+| 3 | 投递卡片展开态 | [`jobs-expanded.png`](../assets/research/offerbiu/jobs-expanded.png) | 展开岗位卡片，观察详情字段 |
+| 4 | 校招信息库 | [`companies.png`](../assets/research/offerbiu/companies.png) | 浏览岗位库筛选、分页、加入投递入口 |
+| 5 | 添加岗位 | [`job-new.png`](../assets/research/offerbiu/job-new.png) | 查看手动录入字段和 AI 解析入口 |
+| 6 | 简历管理 | [`resumes.png`](../assets/research/offerbiu/resumes.png) | 查看多版本简历、文件、绑定岗位、优化记录 |
+| 7 | 简历制作 | [`resume-builder.png`](../assets/research/offerbiu/resume-builder.png) | 查看结构化简历编辑器和实时预览 |
+| 8 | 自动填充 | [`resume-autofill.png`](../assets/research/offerbiu/resume-autofill.png) | 查看网申信息库/自动填充资料页 |
+| 9 | AI 匹配 | [`ai-match.png`](../assets/research/offerbiu/ai-match.png) | 查看简历+岗位/JD 的匹配分析入口 |
+| 10 | AI 匹配登录门槛 | [`ai-match-login-gate.png`](../assets/research/offerbiu/ai-match-login-gate.png) | 点击“生成分析”，确认需登录 |
+| 11 | 简历优化 | [`resume-optimize.png`](../assets/research/offerbiu/resume-optimize.png) | 查看匹配详情、短板、建议、关键词证据 |
+| 12 | 简历优化登录门槛 | [`resume-optimize-login-gate.png`](../assets/research/offerbiu/resume-optimize-login-gate.png) | 点击“生成全量优化”，确认需登录 |
+| 13 | 投递复盘 | [`review.png`](../assets/research/offerbiu/review.png) | 查看周复盘、阶段分布、行动建议 |
+| 14 | 个人中心 | [`profile.png`](../assets/research/offerbiu/profile.png) | 查看账号额度、历史报告、会员状态 |
+| 15 | 会员中心 | [`pricing.png`](../assets/research/offerbiu/pricing.png) | 查看免费/VIP/SVIP 功能边界 |
+| 16 | 免费福利 | [`free-benefits.png`](../assets/research/offerbiu/free-benefits.png) | 查看邀请积分、兑换会员码 |
 
 通用页面框架：左侧固定导航包含总览、我的投递、校招信息库、添加岗位、简历管理、简历制作、自动填充、AI 匹配、简历优化、投递复盘、个人中心、会员中心、免费福利，底部有登录/注册入口。主内容区按页面职责变化，整体是桌面端求职工作台布局。
 

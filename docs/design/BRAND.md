@@ -4,13 +4,13 @@
 > - CTA 从「查看 Live Demo」改为「免费开始」
 > - 移除「作品集商业化思考展示」声明
 > - 视觉标杆转向 Linear / Notion / Apple 落地页
-> - 参见 `.agent-ops/TASK-VISUAL-APPLE-GRADE.md`（Apple 级视觉优化任务）
+> - 最终视觉规则已沉淀在本文，过程任务文档已归档清理
 >
 > **v4 新增文档**（2026-06-24）。与 `PRODUCT.md`（产品面寄存器）并列且隔离。
 >
-> **为什么需要这个文件**：PROJECT.md v4 确立了**双面产品架构**。营销面（落地页+定价页）使用 brand register，产品面（5 个核心应用页）使用 product register。两套寄存器**共享基础调色板但应用规则不同**，本文定义营销面的规则。
+> **为什么需要这个文件**：`PROJECT-CHARTER.md` v4 确立了**双面产品架构**。营销面（落地页+定价页）使用 brand register，产品面（5 个核心应用页）使用 product register。两套寄存器**共享基础调色板但应用规则不同**，本文定义营销面的规则。
 >
-> 配合阅读：`PRODUCT.md`（产品面）、`DESIGN.md`（共享设计令牌）、`evolution-roadmap.md` §5（定价页内容）。
+> 配合阅读：`PRODUCT.md`（产品面）、`DESIGN.md`（共享设计令牌）、`../product/ROADMAP.md` §5（定价页内容）。
 
 ---
 
@@ -225,4 +225,4 @@
 
 ---
 
-*文档版本：v1.0 | 创建日期：2026-06-24 | 上游：PROJECT.md v4 §3.2 | 并列：PRODUCT.md | 共享令牌：DESIGN.md*
+*文档版本：v1.0 | 创建日期：2026-06-24 | 上游：`PROJECT-CHARTER.md` v4 §3.2 | 并列：PRODUCT.md | 共享令牌：DESIGN.md*

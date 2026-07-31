@@ -303,9 +303,9 @@ JobPulse 的实际对应关系：
 
 | 理论文档 | 项目中的实际文件 | 回答的问题 |
 |---|---|---|
-| BRD | PROJECT.md、evolution-roadmap.md | 为什么做、做成什么形态、投入边界、未来如何演进 |
-| MRD | market-analysis.md、competitor-analysis.md、user-personas.md | 市场是否存在、目标用户是谁、竞品如何解决、机会在哪里 |
-| PRD | PRD.md、pain-points-jtbd.md | 核心流程、功能、状态、数据、AC、风险与范围 |
+| BRD / 项目章程 | `PROJECT-CHARTER.md`、`ROADMAP.md` | 为什么做、做成什么形态、投入边界、未来如何演进 |
+| MRD | `MRD.md`、`competitor-analysis.md`、`PERSONAS.md` | 市场是否存在、目标用户是谁、竞品如何解决、机会在哪里 |
+| PRD | `PRD.md`、`JTBD.md` | 核心流程、功能、状态、数据、AC、风险与范围 |
 | 设计说明 | PRODUCT.md、DESIGN.md、shape 系列、REDESIGN-BRIEF.md | 信息架构、页面职责、交互、视觉与响应式 |
 | 技术方案 | system-architecture、database-schema、api-contract 等 | 系统如何落地、数据如何一致、接口如何协作 |
 | 验收与复盘 | qa 目录、PROGRESS、TASK-PIPELINE | 是否完成、有什么问题、下一步是什么 |
@@ -393,7 +393,7 @@ JobPulse 的 MRD 实践：
 - 选择“采集先行 + 演示 + 验证”的路径 B，不把作品集项目和创业冷启动混为一谈。
 - 明确合规、数据源变化、用户不愿维护状态和冷启动数据不足等风险。
 
-market-analysis 中的 TAM、SAM、SOM 和增长目标属于早期量级估算，并未通过真实商业运营验证。简历和面试可以讲估算方法及取舍，不能把这些数字描述成真实用户或市场结果。
+`MRD.md` 中的 TAM、SAM、SOM 和增长目标属于早期量级估算，并未通过真实商业运营验证。简历和面试可以讲估算方法及取舍，不能把这些数字描述成真实用户或市场结果。
 
 面试表达：
 

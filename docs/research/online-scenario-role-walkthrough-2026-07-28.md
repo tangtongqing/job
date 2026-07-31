@@ -215,9 +215,9 @@
 
 走查证据截图：
 
-- [`p1-application-updated.png`](../../output/role-walkthrough/p1-application-updated.png)
-- [`p2-mobile-saved.png`](../../output/role-walkthrough/p2-mobile-saved.png)
-- [`p3-dashboard-after-update.png`](../../output/role-walkthrough/p3-dashboard-after-update.png)
+- [投递时间线](../../web/public/media/case-study/application-timeline-evidence.png)
+- [移动端收藏](../../web/public/media/case-study/mobile-saved-evidence.png)
+- [看板更新](../../web/public/media/case-study/dashboard-evidence.png)
 
 ---
 
@@ -325,12 +325,11 @@
 3. P4 仍不支持 Excel / Notion 导入，也不能仅凭一封新通知自动建立未知投递，因此不能改写为“P4 已完全适配”；
 4. 本次仍是专家模拟走查，不替代真人用户观察。
 
-修复证据截图：
+修复后的长期保留证据：
 
-- [`p0-manual-application-form.png`](../../output/role-walkthrough/p0-manual-application-form.png)
-- [`p0-manual-application-fixed.png`](../../output/role-walkthrough/p0-manual-application-fixed.png)
-- [`p0-schedule-timeline-fixed.png`](../../output/role-walkthrough/p0-schedule-timeline-fixed.png)
-- [`p0-schedule-todo-fixed.png`](../../output/role-walkthrough/p0-schedule-todo-fixed.png)
+- [通知时间进入近期安排](../../web/public/media/case-study/post-fix-schedule.png)
+- [岗位库外投递补录](../../web/public/media/case-study/post-fix-manual-application.png)
+- 可复现脚本：[`web/scripts/role-walkthrough-26.mjs`](../../web/scripts/role-walkthrough-26.mjs)
 
 ---
 
@@ -387,12 +386,7 @@
 4. P4 仍有 2 项未满足：历史导入、未知通知自动建档；
 5. `19/23` 和 `20/26` 是专家模拟走查的结果覆盖，不是用户任务完成率。
 
-新增证据截图：
-
-- [`post-fix-p1-schedule.png`](../../output/role-walkthrough/post-fix-p1-schedule.png)
-- [`post-fix-p2-mobile-subscription.png`](../../output/role-walkthrough/post-fix-p2-mobile-subscription.png)
-- [`post-fix-p3-dashboard.png`](../../output/role-walkthrough/post-fix-p3-dashboard.png)
-- [`post-fix-p4-manual-application.png`](../../output/role-walkthrough/post-fix-p4-manual-application.png)
+新增证据沿用上方两张最终修复截图。中间态截图已删除，完整复测可由脚本重新生成。
 
 工程验证：
 

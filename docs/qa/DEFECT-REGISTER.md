@@ -13,6 +13,9 @@
 
 | ID | 等级 | 事项 | 处理建议 |
 |---|---|---|---|
-| QA-DEBT-01 | P3 | Python 仍有 `datetime.utcnow()`、SQLAlchemy `Query.get()` 等 269 条弃用警告 | 长期维护阶段统一升级为时区感知时间与 SQLAlchemy 2.x API |
-| QA-DEBT-02 | P3 | Next.js 因用户主目录存在另一个 lockfile，构建时提示 workspace root 推断警告 | 后续在 `next.config.ts` 明确构建根目录；当前不影响产物 |
+| QA-DEBT-01 | P3 | 当前 pytest 有 257 条弃用警告，主要来自 `datetime.utcnow()`，另含 Starlette TestClient/httpx 兼容提示 | 长期维护阶段统一升级为时区感知时间，并跟进测试客户端兼容方案 |
 | QA-DEBT-03 | P3 | 浏览器回归本轮通过 CLI 执行，尚未沉淀为 CI 中的持久化 E2E 脚本 | 下一阶段建立隔离测试数据库和 Playwright CI |
+
+## 2026-07-30 关闭项
+
+- `QA-DEBT-02`：已在 `web/next.config.ts` 明确 `outputFileTracingRoot`，不再受用户目录其他 lockfile 影响。

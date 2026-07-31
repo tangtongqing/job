@@ -2,6 +2,7 @@
 
 > **背景**（2026-07-01）：用户发现 offerbiu.com 是同类产品且已上线运营。
 > 本文档基于首页公开信息整理其功能矩阵，与我们的设计对比，识别盲区与差异化机会。
+> 首页证据：[Offerbiu 首页截图](../assets/research/offerbiu/home-desktop.png)。
 > **内页分析已完成**：见 `competitor-offerbiu-innerpages.md`（16 页深度分析）。
 >
 > **战略决策（2026-07-01，用户拍板）**：
