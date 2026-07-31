@@ -1,6 +1,6 @@
 import vinext from "vinext";
 import { defineConfig } from "vite";
-import { sites } from "./build/sites-vite-plugin";
+import { sites } from "./sites-vite-plugin";
 
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 

@@ -55,6 +55,8 @@ node scripts/role-walkthrough-26.mjs
 - `next-themes` 双主题
 - vinext + Cloudflare Worker 运行时
 - `lib/api.ts` 统一处理后端响应与错误
+- `components/marketing/` 是官网唯一实现；`components/app/` 承载产品后台共享组件
+- `sites-vite-plugin.ts` 负责在 Sites 构建产物中打包托管元数据
 
 ## 线上边界
 

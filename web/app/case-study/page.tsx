@@ -15,7 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { ProductFilm } from "@/components/marketing-v2/ProductFilm";
+import { ProductFilm } from "@/components/marketing/ProductFilm";
 
 const SECTION_NAV = [
   ["context", "问题"],
