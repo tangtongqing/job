@@ -10,6 +10,7 @@ from src.crawler.adapters.company import CompanyWebsiteAdapter
 from src.crawler.adapters.boss import BossAdapter
 from src.crawler.adapters.nowcoder import NowcoderAdapter
 from src.crawler.adapters.greenhouse import GreenhouseAdapter
+from src.crawler.adapters.cmb_campus import CmbCampusAdapter
 
 # source 名 → 适配器类
 _REGISTRY: dict[str, type[BaseAdapter]] = {
@@ -17,6 +18,7 @@ _REGISTRY: dict[str, type[BaseAdapter]] = {
     "boss": BossAdapter,
     "nowcoder": NowcoderAdapter,
     "greenhouse": GreenhouseAdapter,
+    "cmb_campus": CmbCampusAdapter,
 }
 
 
@@ -29,7 +31,7 @@ def create_adapter(
     """按 source 名创建适配器。
 
     Args:
-        source: 适配器名（company/boss/nowcoder/greenhouse）
+        source: 适配器名（company/boss/nowcoder/greenhouse/cmb_campus）
         config: 适配器配置
         robots_checker: 注入 RobotsChecker（测试用）
         **kwargs: 其他注入参数（如 company 的 html_fetcher）

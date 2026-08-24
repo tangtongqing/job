@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Protocol
 
@@ -46,7 +45,11 @@ class BaseAdapter(ABC):
 
         return httpx.Client(
             timeout=self.config.get("timeout", 30),
-            headers={"User-Agent": self._get_random_ua()},
+            headers={
+                "User-Agent": self.config.get(
+                    "user_agent", "JobPulseSourceMonitor/1.0"
+                )
+            },
         )
 
     @abstractmethod
@@ -88,10 +91,3 @@ class BaseAdapter(ABC):
             if close:
                 close()
             self._client = None
-
-    def _get_random_ua(self) -> str:
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        ]
-        return random.choice(user_agents)

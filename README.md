@@ -11,12 +11,17 @@ JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位�
 | 项目章程 / BRD | [`docs/product/PROJECT-CHARTER.md`](docs/product/PROJECT-CHARTER.md) |
 | MRD | [`docs/product/MRD.md`](docs/product/MRD.md) |
 | PRD | [`docs/product/PRD.md`](docs/product/PRD.md) / [`PRD.docx`](docs/product/PRD.docx) |
+| M1 PRD | [`docs/product/PRD-M1.md`](docs/product/PRD-M1.md) |
+| 项目重构与后续修改计划 | [`docs/product/PROJECT-RESTRUCTURE-PLAN.md`](docs/product/PROJECT-RESTRUCTURE-PLAN.md) |
+| 当前阶段收口快照 | [`docs/archive/M1-FOUNDATION-CHECKPOINT-2026-08-24.md`](docs/archive/M1-FOUNDATION-CHECKPOINT-2026-08-24.md) |
 | Figma 高保真原型 | [`docs/design/HIGH-FIDELITY-PROTOTYPE-INDEX.md`](docs/design/HIGH-FIDELITY-PROTOTYPE-INDEX.md) |
 | 用户画像 | [`docs/product/PERSONAS.md`](docs/product/PERSONAS.md) |
 | JTBD | [`docs/product/JTBD.md`](docs/product/JTBD.md) |
 | 路线图 | [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) |
 | 系统架构 | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) |
 | 当前验收报告 | [`docs/qa/ACCEPTANCE-REPORT.md`](docs/qa/ACCEPTANCE-REPORT.md) |
+
+2026-08-24 已完成一次项目基线收口：M0 求职工作台继续作为可演示现状，M1 国内校招公共数据模型与安全迁移作为已完成底座，快照差分、公共 API 和招聘雷达前端仍属于下一阶段。后续 PRD、架构、Figma、QA 和作品集修改统一按上表中的项目重构计划推进。
 
 ## 在线体验
 
@@ -39,13 +44,21 @@ JobPulse 是一个招聘信息聚合与投递管理 SaaS Beta：把分散岗位�
 
 同时支持：岗位订阅 CRUD、事件时间线、AI 邮件解析建议（用户确认后才更新）、公开招聘 API 数据采集，以及一键恢复确定性的 Demo 数据。
 
-数据层支持两部分：24 条可离线复现的完整演示快照，以及来自 Figma、Webflow、Intercom、Stripe 公开 Greenhouse Job Board API 的真实岗位。线上公开演示固定使用 24 条快照，并关闭匿名采集触发；本地可按需运行公开来源采集。岗位保留完整 JD、任职要求和官方投递链接；BOSS、牛客等受限平台默认关闭，不绕过登录、验证码或反爬限制。
+数据层当前保留 24 条可离线复现的国内校招演示快照。首批 10 家公司已建立[官方来源注册表](config/company_sources.json)，招商银行应届生/实习生公开接口适配器已完成分页与源端总数对账；所有正式来源仍保持关闭，等待逐源合规审核后再进入后台调度。Figma、Webflow、Intercom、Stripe 等海外默认源已经停用，BOSS、猎聘、牛客等受限平台默认关闭，不绕过登录、验证码、客户端签名或反爬限制。详细进度见[国内校招采集工程记录](docs/engineering/DOMESTIC-CAMPUS-INGESTION.md)。
 
 “邮件解析”是粘贴招聘邮件文本后给出状态建议，不负责收发邮件。线上没有配置 OpenAI、DeepSeek、SMTP、SendGrid 或 Resend 等付费 API；无密钥时自动使用本地正则降级解析，且任何状态变化仍需用户确认。
 
 ## 本地启动
 
 要求 Python 3.10+ 与 Node.js 22.13+。
+
+Windows 下一键启动（推荐）：双击项目根目录的 `start.cmd`，或在 PowerShell 中运行：
+
+```powershell
+.\start.ps1
+```
+
+脚本会自动安装缺失依赖，并在每次启动前检查数据库版本。旧版未纳入 Alembic 的本地 SQLite 只有在结构与 M0 基线完全一致时才会先备份、标记基线并升级；结构漂移会停止启动且不修改数据库。随后脚本分别打开前后端终端，等待服务就绪并打开产品 Demo。
 
 在项目根目录启动后端：
 
@@ -96,7 +109,7 @@ npm run build:sites
 node scripts/role-walkthrough-26.mjs
 ```
 
-当前基线：120 项后端测试通过，前端 ESLint 零错误，14 个 Next.js 路由完成 Next.js 与 Codex Sites 生产构建；26 项专家模拟走查在修复后达到核心 19/23、边界 1/3、全部 20/26。该结果用于产品路径验收，不是用户任务完成率。
+当前基线：171 项后端测试通过，前端 ESLint 零错误，14 个 Next.js 路由完成 Next.js 与 Codex Sites 生产构建；26 项专家模拟走查在修复后达到核心 19/23、边界 1/3、全部 20/26。该结果用于产品路径验收，不是用户任务完成率。
 
 ## 技术栈
 

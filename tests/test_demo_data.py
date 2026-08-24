@@ -17,6 +17,11 @@ def test_demo_seed_has_complete_jobs_and_honest_log(session):
     assert all(job.source_url and job.source_url.startswith("https://") for job in jobs)
     assert all(job.education and job.experience for job in jobs)
     assert all(job.last_verified_at for job in jobs)
+    assert not {"Figma", "Webflow", "Intercom", "Stripe"}.intersection(
+        {job.company for job in jobs}
+    )
+    assert all(job.graduation_year in {"2027", "2028"} for job in jobs)
+    assert any(job.is_intern and job.graduation_year == "2028" for job in jobs)
 
     logs = session.query(CrawlLog).all()
     assert len(logs) == 1

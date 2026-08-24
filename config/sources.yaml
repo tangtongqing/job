@@ -1,5 +1,8 @@
-# 采集源配置（crawler-module.md §三 + 返工任务 §4）
-# 高风险来源默认 enabled: false
+# 采集源配置（crawler-module.md §三 + 国内校招数据源策略）
+#
+# M1 默认只收录国内校招、春招、秋招与实习岗位。M0 用来证明公开 ATS
+# 链路的海外 Greenhouse 来源已全部停用；在国内官方来源注册表和对应解析器
+# 通过验收前，不用错误地区的数据填充“实时岗位”。高风险平台始终默认关闭。
 
 global:
   crawl_interval_minutes: 60
@@ -9,50 +12,62 @@ global:
 
 sources:
   company_website:
-    enabled: false           # 配置具体官网解析器后再开启
+    enabled: false           # 国内官方来源注册表和解析器通过验收后逐源开启
     adapter: company
-    base_urls: []            # 实际使用时填入企业官网 URL
+    base_urls: []            # 禁止直接填入聚合平台或未经授权的页面
+
+  cmb_campus:
+    enabled: false           # 公开接口适配器已实现；完成最终条款审核后再启用调度
+    adapter: cmb_campus
+    registry_source_id: cmb_campus
+    company: 招商银行
+    page_size: 50
+    min_interval_seconds: 1
 
   greenhouse_figma:
-    enabled: true
+    enabled: false           # M0 海外链路验证源，不属于国内校招产品范围
     adapter: greenhouse
     board_token: figma
     company: Figma
+    sample_mode: true        # 仅保留历史演示筛选；正式来源禁止筛选与截断
     max_jobs: 12
     min_interval_seconds: 2
     keywords: ["product manager", "product design", "product research", "growth product"]
 
   greenhouse_webflow:
-    enabled: true
+    enabled: false           # M0 海外链路验证源，不属于国内校招产品范围
     adapter: greenhouse
     board_token: webflow
     company: Webflow
+    sample_mode: true        # 仅保留历史演示筛选；正式来源禁止筛选与截断
     max_jobs: 12
     min_interval_seconds: 2
     keywords: ["product manager", "product design", "product research", "growth product"]
 
   greenhouse_intercom:
-    enabled: true
+    enabled: false           # M0 海外链路验证源，不属于国内校招产品范围
     adapter: greenhouse
     board_token: intercom
     company: Intercom
+    sample_mode: true        # 仅保留历史演示筛选；正式来源禁止筛选与截断
     max_jobs: 12
     min_interval_seconds: 2
     keywords: ["product manager", "product design", "product research", "growth product"]
 
   greenhouse_stripe:
-    enabled: true
+    enabled: false           # M0 海外链路验证源，不属于国内校招产品范围
     adapter: greenhouse
     board_token: stripe
     company: Stripe
+    sample_mode: true        # 仅保留历史演示筛选；正式来源禁止筛选与截断
     max_jobs: 12
     min_interval_seconds: 2
     keywords: ["product manager", "product design", "product research", "growth product"]
 
   boss:
-    enabled: false           # 高风险，默认关
+    enabled: false           # 协议禁止未经许可抓取；仅保留合规占位
     adapter: boss
 
   nowcoder:
-    enabled: false           # 高风险，默认关
+    enabled: false           # 未完成授权与条款评估，默认关闭
     adapter: nowcoder

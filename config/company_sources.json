@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-05",
+  "collection_scope": [
+    "campus_full_time",
+    "graduate_program",
+    "internship"
+  ],
+  "companies": [
+    {
+      "id": "tencent",
+      "name": "腾讯",
+      "aliases": ["腾讯集团", "Tencent"],
+      "industry": "互联网",
+      "priority": 1,
+      "official_domains": ["careers.tencent.com"],
+      "sources": [
+        {
+          "id": "tencent_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://careers.tencent.com/campusrecruit.html",
+          "job_list_url": "https://careers.tencent.com/campusrecruit.html",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "paused",
+          "automation_decision": "prohibited",
+          "robots_status": "missing_or_html_fallback",
+          "terms_status": "restricted",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [
+            "https://careers.tencent.com/m/zh-cn/termsservice.html"
+          ],
+          "notes": "腾讯招聘服务协议禁止通过程序抓取平台相关信息；只保留人工发现或未来书面授权入口。"
+        }
+      ]
+    },
+    {
+      "id": "bytedance",
+      "name": "字节跳动",
+      "aliases": ["ByteDance"],
+      "industry": "互联网",
+      "priority": 1,
+      "official_domains": ["jobs.bytedance.com"],
+      "sources": [
+        {
+          "id": "bytedance_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://jobs.bytedance.com/campus/",
+          "job_list_url": "https://jobs.bytedance.com/campus/position",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "campus_allowed",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [
+            "https://jobs.bytedance.com/robots.txt"
+          ],
+          "notes": "robots.txt 允许 campus 路径，但岗位接口要求官网客户端签名；禁止逆向或绕过，等待许可评审。"
+        }
+      ]
+    },
+    {
+      "id": "alibaba",
+      "name": "阿里巴巴",
+      "aliases": ["阿里", "Alibaba"],
+      "industry": "互联网",
+      "priority": 1,
+      "official_domains": ["campus-talent.alibaba.com"],
+      "sources": [
+        {
+          "id": "alibaba_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://campus-talent.alibaba.com/",
+          "job_list_url": "https://campus-talent.alibaba.com/",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "missing",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方入口已确认；robots 与条款边界尚未完成审核。"
+        }
+      ]
+    },
+    {
+      "id": "meituan",
+      "name": "美团",
+      "aliases": ["Meituan"],
+      "industry": "互联网",
+      "priority": 1,
+      "official_domains": ["zhaopin.meituan.com"],
+      "sources": [
+        {
+          "id": "meituan_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://zhaopin.meituan.com/web/campus",
+          "job_list_url": "https://zhaopin.meituan.com/web/campus",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "html_fallback",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方入口已确认；robots.txt 返回应用 HTML，按 fail-closed 保持停用。"
+        }
+      ]
+    },
+    {
+      "id": "huawei",
+      "name": "华为",
+      "aliases": ["华为技术", "Huawei"],
+      "industry": "通信与硬件",
+      "priority": 1,
+      "official_domains": ["career.huawei.com"],
+      "sources": [
+        {
+          "id": "huawei_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://career.huawei.com/cn/campus-recruitment",
+          "job_list_url": "https://career.huawei.com/cn/campus-recruitment",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "html_fallback",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方入口已确认；robots.txt 返回站点页面而非有效规则，保持停用。"
+        }
+      ]
+    },
+    {
+      "id": "dji",
+      "name": "大疆",
+      "aliases": ["大疆创新", "DJI"],
+      "industry": "智能硬件",
+      "priority": 1,
+      "official_domains": ["careers.dji.com"],
+      "sources": [
+        {
+          "id": "dji_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://careers.dji.com/zh-CN/campus",
+          "job_list_url": "https://careers.dji.com/zh-CN/campus",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "html_fallback",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方入口已确认；robots.txt 返回应用 HTML，按 fail-closed 保持停用。"
+        }
+      ]
+    },
+    {
+      "id": "byd",
+      "name": "比亚迪",
+      "aliases": ["BYD"],
+      "industry": "汽车与制造",
+      "priority": 1,
+      "official_domains": ["job.byd.com"],
+      "sources": [
+        {
+          "id": "byd_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://job.byd.com/portal/mobile/school-home",
+          "job_list_url": "https://job.byd.com/portal/mobile/school-home",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "missing",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方校招、博士和实习入口已确认；robots 文件缺失，保持停用。"
+        }
+      ]
+    },
+    {
+      "id": "cmb",
+      "name": "招商银行",
+      "aliases": ["招行", "CMB"],
+      "industry": "金融",
+      "priority": 1,
+      "official_domains": ["career.cmbchina.com"],
+      "sources": [
+        {
+          "id": "cmb_campus",
+          "source_type": "official_public_api",
+          "canonical_url": "https://career.cmbchina.com/campus/home",
+          "job_list_url": "https://career.cmbchina.com/positionlist/96574F8D-C7ED-4772-AE7C-BAC896D190C1",
+          "adapter": "cmb_campus",
+          "adapter_options": {
+            "page_size": 50,
+            "recruitment_type_ids": {
+              "campus_full_time": "96574F8D-C7ED-4772-AE7C-BAC896D190C1",
+              "internship": "DF94FD6D-26D3-4A19-9E69-577C4BA1DE82"
+            }
+          },
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "allowed",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [
+            "https://career.cmbchina.com/robots.txt"
+          ],
+          "notes": "公开列表与详情接口已验证，无需登录或客户端签名；等待最终条款审核后再启用调度。"
+        }
+      ]
+    },
+    {
+      "id": "china_mobile",
+      "name": "中国移动",
+      "aliases": ["中国移动通信集团", "China Mobile"],
+      "industry": "央企与通信",
+      "priority": 1,
+      "official_domains": ["job.10086.cn"],
+      "sources": [
+        {
+          "id": "china_mobile_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://job.10086.cn/",
+          "job_list_url": "https://job.10086.cn/",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "missing",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "集团官方招聘入口已确认；需继续覆盖各省公司入口并完成许可审核。"
+        }
+      ]
+    },
+    {
+      "id": "midea",
+      "name": "美的集团",
+      "aliases": ["美的", "Midea"],
+      "industry": "消费与制造",
+      "priority": 1,
+      "official_domains": ["careers.midea.com"],
+      "sources": [
+        {
+          "id": "midea_campus",
+          "source_type": "official_career_site",
+          "canonical_url": "https://careers.midea.com/",
+          "job_list_url": "https://careers.midea.com/schoolOut/post?type=2",
+          "adapter": "pending",
+          "adapter_options": {},
+          "collection_mode": "complete",
+          "enabled": false,
+          "status": "reviewing",
+          "automation_decision": "pending",
+          "robots_status": "timeout",
+          "terms_status": "pending",
+          "last_reviewed_at": "2026-08-05",
+          "evidence_urls": [],
+          "notes": "官方入口已确认；robots 检查超时，按 fail-closed 保持停用。"
+        }
+      ]
+    }
+  ]
+}

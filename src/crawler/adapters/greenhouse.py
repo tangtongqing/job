@@ -40,8 +40,22 @@ class GreenhouseAdapter(BaseAdapter):
         super().__init__(config)
         self.board_token = str(self.config.get("board_token", "")).strip()
         self.company = str(self.config.get("company", "")).strip()
-        self.max_jobs = max(1, int(self.config.get("max_jobs", 15)))
-        configured_keywords = self.config.get("keywords", [])
+        self.sample_mode = self.config.get("sample_mode") is True
+        sample_controls = {"keywords", "max_jobs"}.intersection(self.config)
+        if sample_controls and not self.sample_mode:
+            controls = ", ".join(sorted(sample_controls))
+            raise ValueError(
+                f"Complete collection does not allow {controls}; "
+                "set sample_mode=true only for non-production demos"
+            )
+
+        configured_max_jobs = self.config.get("max_jobs") if self.sample_mode else None
+        self.max_jobs = (
+            max(1, int(configured_max_jobs))
+            if configured_max_jobs is not None
+            else None
+        )
+        configured_keywords = self.config.get("keywords", []) if self.sample_mode else []
         if isinstance(configured_keywords, str):
             configured_keywords = [configured_keywords]
         self.keywords = [str(item).strip().lower() for item in configured_keywords if str(item).strip()]
@@ -78,7 +92,9 @@ class GreenhouseAdapter(BaseAdapter):
             key=lambda job: job.get("first_published") or job.get("updated_at") or "",
             reverse=True,
         )
-        return jobs[: self.max_jobs]
+        if self.max_jobs is not None:
+            return jobs[: self.max_jobs]
+        return jobs
 
     def _fetch_json(self, url: str) -> dict[str, Any]:
         if self._json_fetcher is not None:

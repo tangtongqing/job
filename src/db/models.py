@@ -1,4 +1,4 @@
-"""JobPulse ORM 模型。7 表，对应 database-schema.md v2。
+"""JobPulse ORM 模型：M0 投递管理 + M1 公共招聘雷达。
 
 关键设计决策：
 - 所有枚举字段用英文 code 存储（中文由应用层映射）
@@ -14,10 +14,15 @@ from sqlalchemy import (
     Integer,
     Text,
     DateTime,
+    Date,
     Boolean,
+    Float,
+    JSON,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     CheckConstraint,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -84,6 +89,47 @@ EVT_CORRECTION = "correction"
 CRAWL_SUCCESS = "success"
 CRAWL_FAILED = "failed"
 CRAWL_SKIPPED = "skipped"
+
+# M1 company recruitment radar
+COMPANY_CANDIDATE = "candidate"
+COMPANY_VERIFIED = "verified"
+COMPANY_MONITORING = "monitoring"
+COMPANY_PAUSED = "paused"
+COMPANY_RETIRED = "retired"
+
+CAMPAIGN_SEASONS = frozenset(
+    {"autumn", "spring", "early", "makeup", "rolling", "unknown"}
+)
+RECRUITMENT_TYPES = frozenset(
+    {"campus_full_time", "graduate_program", "internship", "unknown"}
+)
+INTERNSHIP_TYPES = frozenset(
+    {"not_applicable", "summer", "daily", "winter", "unknown"}
+)
+CAMPAIGN_STATUSES = frozenset({"upcoming", "active", "closed", "unknown"})
+POSITION_STATUSES = frozenset({"open", "closed", "unknown"})
+SNAPSHOT_STATUSES = frozenset({"success", "failed"})
+COMPLETENESS_STATUSES = frozenset(
+    {"count_matched", "pagination_verified", "incomplete", "failed"}
+)
+SNAPSHOT_COMPARISON_STATUSES = frozenset(
+    {"pending", "baseline", "compared", "suppressed", "failed"}
+)
+CHANGE_EVENT_TYPES = frozenset(
+    {
+        "campaign_started",
+        "campaign_updated",
+        "campaign_closed",
+        "positions_changed",
+        "position_reopened",
+        "page_updated",
+        "source_degraded",
+        "source_recovered",
+    }
+)
+CHANGE_COMPUTATION_STATUSES = frozenset(
+    {"computed", "suppressed", "review_required"}
+)
 
 # 状态中文映射（前端/API 用）
 STATUS_LABEL_CN = {
@@ -366,23 +412,596 @@ class Subscription(Base):
 
 
 class Company(Base):
-    """公司表（database-schema.md §3.6）。"""
+    """Public company identity used by the M1 recruitment radar."""
 
     __tablename__ = "company"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    parent_company_id = Column(
+        Integer,
+        ForeignKey("company.id", name="fk_company_parent"),
+    )
+    registry_id = Column(Text)
     name = Column(Text, nullable=False, unique=True)
+    aliases = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=_sa_text("'[]'"),
+    )
     industry = Column(Text)
     category = Column(Text)
+    ownership_type = Column(Text)
     website = Column(Text)
+    status = Column(
+        Text,
+        nullable=False,
+        default=COMPANY_CANDIDATE,
+        server_default=_sa_text("'candidate'"),
+    )
+    first_verified_at = Column(DateTime)
+    last_observed_at = Column(DateTime)
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=_sa_text("CURRENT_TIMESTAMP"),
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=_sa_text("CURRENT_TIMESTAMP"),
+    )
+
+    parent_company = relationship(
+        "Company",
+        remote_side=[id],
+        back_populates="child_companies",
+    )
+    child_companies = relationship("Company", back_populates="parent_company")
+    recruitment_campaigns = relationship(
+        "RecruitmentCampaign", back_populates="company"
+    )
+    observed_positions = relationship(
+        "ObservedPositionRef", back_populates="company"
+    )
+    source_snapshots = relationship("SourceSnapshot", back_populates="company")
+    change_events = relationship("CompanyChangeEvent", back_populates="company")
 
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('candidate', 'verified', 'monitoring', 'paused', 'retired')",
+            name="chk_company_status",
+        ),
+        CheckConstraint(
+            "parent_company_id IS NULL OR parent_company_id <> id",
+            name="chk_company_not_own_parent",
+        ),
+        CheckConstraint(
+            "status NOT IN ('verified', 'monitoring') OR "
+            "first_verified_at IS NOT NULL",
+            name="chk_company_verified_timestamp",
+        ),
+        Index("idx_company_parent", "parent_company_id"),
+        Index(
+            "idx_company_registry_id",
+            "registry_id",
+            unique=True,
+            sqlite_where=_where_not_null("registry_id"),
+            postgresql_where=_where_not_null("registry_id"),
+        ),
         Index(
             "idx_company_category",
             "category",
             sqlite_where=_where_not_null("category"),
             postgresql_where=_where_not_null("category"),
         ),
+        Index("idx_company_status", "status"),
+        Index(
+            "idx_company_first_verified_at",
+            "first_verified_at",
+            sqlite_where=_where_not_null("first_verified_at"),
+            postgresql_where=_where_not_null("first_verified_at"),
+        ),
+    )
+
+
+class RecruitmentCampaign(Base):
+    """One official recruitment campaign, separate from its position list."""
+
+    __tablename__ = "recruitment_campaign"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    source_id = Column(Text, nullable=False)
+    campaign_key = Column(Text, nullable=False)
+    name = Column(Text, nullable=False)
+    season = Column(Text, nullable=False, default="unknown")
+    campaign_year = Column(Integer)
+    recruitment_type = Column(Text, nullable=False, default="unknown")
+    internship_type = Column(Text, nullable=False, default="not_applicable")
+    graduation_years_status = Column(
+        Text,
+        nullable=False,
+        default="unknown",
+        server_default=_sa_text("'unknown'"),
+    )
+    status = Column(Text, nullable=False, default="unknown")
+    start_at = Column(DateTime)
+    deadline = Column(DateTime)
+    official_url = Column(Text, nullable=False)
+    first_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    classification_confidence = Column(Float)
+    classification_evidence = Column(
+        JSON,
+        nullable=False,
+        default=dict,
+        server_default=_sa_text("'{}'"),
+    )
+
+    company = relationship("Company", back_populates="recruitment_campaigns")
+    graduation_cohorts = relationship(
+        "CampaignGraduationYear",
+        back_populates="campaign",
+        cascade="all, delete-orphan",
+    )
+    observed_positions = relationship(
+        "ObservedPositionRef", back_populates="campaign", viewonly=True
+    )
+    change_events = relationship(
+        "CompanyChangeEvent", back_populates="campaign", viewonly=True
+    )
+
+    @property
+    def graduation_years(self) -> list[int]:
+        return sorted(record.graduation_year for record in self.graduation_cohorts)
+
+    @graduation_years.setter
+    def graduation_years(self, values) -> None:
+        years = sorted({int(value) for value in (values or [])})
+        self.graduation_cohorts = [
+            CampaignGraduationYear(graduation_year=year) for year in years
+        ]
+        self.graduation_years_status = "known" if years else "unknown"
+
+    __table_args__ = (
+        CheckConstraint(
+            "season IN ('autumn', 'spring', 'early', 'makeup', 'rolling', 'unknown')",
+            name="chk_campaign_season",
+        ),
+        CheckConstraint(
+            "recruitment_type IN ('campus_full_time', 'graduate_program', 'internship', 'unknown')",
+            name="chk_campaign_recruitment_type",
+        ),
+        CheckConstraint(
+            "internship_type IN ('not_applicable', 'summer', 'daily', 'winter', 'unknown')",
+            name="chk_campaign_internship_type",
+        ),
+        CheckConstraint(
+            "status IN ('upcoming', 'active', 'closed', 'unknown')",
+            name="chk_campaign_status",
+        ),
+        CheckConstraint(
+            "graduation_years_status IN ('known', 'unknown')",
+            name="chk_campaign_graduation_years_status",
+        ),
+        CheckConstraint(
+            "campaign_year IS NULL OR (campaign_year >= 2000 AND campaign_year <= 2200)",
+            name="chk_campaign_year",
+        ),
+        CheckConstraint(
+            "classification_confidence IS NULL OR "
+            "(classification_confidence >= 0 AND classification_confidence <= 1)",
+            name="chk_campaign_confidence",
+        ),
+        CheckConstraint(
+            "last_seen_at >= first_seen_at",
+            name="chk_campaign_seen_order",
+        ),
+        CheckConstraint(
+            "start_at IS NULL OR deadline IS NULL OR deadline >= start_at",
+            name="chk_campaign_date_order",
+        ),
+        UniqueConstraint(
+            "id",
+            "company_id",
+            name="uq_campaign_identity_scope",
+        ),
+        Index(
+            "idx_campaign_source_key",
+            "company_id",
+            "campaign_key",
+            unique=True,
+        ),
+        Index("idx_campaign_company_status", "company_id", "status"),
+        Index(
+            "idx_campaign_deadline",
+            "deadline",
+            sqlite_where=_where_not_null("deadline"),
+            postgresql_where=_where_not_null("deadline"),
+        ),
+    )
+
+
+class CampaignGraduationYear(Base):
+    """Cross-database, indexable graduation cohort for a campaign."""
+
+    __tablename__ = "campaign_graduation_year"
+
+    campaign_id = Column(
+        Integer,
+        ForeignKey("recruitment_campaign.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    graduation_year = Column(Integer, primary_key=True)
+
+    campaign = relationship(
+        "RecruitmentCampaign", back_populates="graduation_cohorts"
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "graduation_year >= 2000 AND graduation_year <= 2200",
+            name="chk_campaign_graduation_year",
+        ),
+        Index(
+            "idx_campaign_graduation_year_lookup",
+            "graduation_year",
+            "campaign_id",
+        ),
+    )
+
+
+class ObservedPositionRef(Base):
+    """A public, lightweight position reference; never stores the full JD."""
+
+    __tablename__ = "observed_position_ref"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    campaign_id = Column(Integer)
+    source_id = Column(Text, nullable=False)
+    dedupe_key = Column(Text, nullable=False)
+    identity_kind = Column(Text, nullable=False)
+    external_job_id = Column(Text)
+    canonical_url = Column(Text)
+    title = Column(Text, nullable=False)
+    locations = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=_sa_text("'[]'"),
+    )
+    category = Column(Text, nullable=False, default="unknown")
+    recruitment_type = Column(Text, nullable=False, default="unknown")
+    internship_type = Column(Text, nullable=False, default="not_applicable")
+    graduation_years = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=_sa_text("'[]'"),
+    )
+    first_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    closed_at = Column(DateTime)
+    status = Column(Text, nullable=False, default="open")
+    content_fingerprint = Column(Text, nullable=False)
+    missing_count = Column(Integer, nullable=False, default=0)
+    classification_confidence = Column(Float)
+    classification_evidence = Column(
+        JSON,
+        nullable=False,
+        default=dict,
+        server_default=_sa_text("'{}'"),
+    )
+
+    company = relationship("Company", back_populates="observed_positions")
+    campaign = relationship(
+        "RecruitmentCampaign",
+        back_populates="observed_positions",
+        viewonly=True,
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["campaign_id", "company_id"],
+            [
+                "recruitment_campaign.id",
+                "recruitment_campaign.company_id",
+            ],
+            name="fk_position_ref_campaign_scope",
+        ),
+        CheckConstraint(
+            "status IN ('open', 'closed', 'unknown')",
+            name="chk_position_ref_status",
+        ),
+        CheckConstraint(
+            "identity_kind IN ('external_id', 'canonical_url', 'fingerprint')",
+            name="chk_position_ref_identity_kind",
+        ),
+        CheckConstraint(
+            "(identity_kind <> 'external_id' OR external_job_id IS NOT NULL) AND "
+            "(identity_kind <> 'canonical_url' OR canonical_url IS NOT NULL)",
+            name="chk_position_ref_identity_evidence",
+        ),
+        CheckConstraint(
+            "recruitment_type IN ('campus_full_time', 'graduate_program', 'internship', 'unknown')",
+            name="chk_position_ref_recruitment_type",
+        ),
+        CheckConstraint(
+            "internship_type IN ('not_applicable', 'summer', 'daily', 'winter', 'unknown')",
+            name="chk_position_ref_internship_type",
+        ),
+        CheckConstraint("missing_count >= 0", name="chk_position_ref_missing_count"),
+        CheckConstraint(
+            "classification_confidence IS NULL OR "
+            "(classification_confidence >= 0 AND classification_confidence <= 1)",
+            name="chk_position_ref_confidence",
+        ),
+        CheckConstraint(
+            "last_seen_at >= first_seen_at",
+            name="chk_position_ref_seen_order",
+        ),
+        CheckConstraint(
+            "(status = 'closed' AND closed_at IS NOT NULL) OR "
+            "(status <> 'closed' AND closed_at IS NULL)",
+            name="chk_position_ref_closed_time",
+        ),
+        Index(
+            "idx_position_ref_source_dedupe",
+            "source_id",
+            "dedupe_key",
+            unique=True,
+        ),
+        Index("idx_position_ref_company_status", "company_id", "status"),
+        Index("idx_position_ref_campaign", "campaign_id"),
+        Index("idx_position_ref_last_seen", "source_id", "last_seen_at"),
+    )
+
+
+class SourceSnapshot(Base):
+    """One reconciled or failed observation of an official position source."""
+
+    __tablename__ = "source_snapshot"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    source_id = Column(Text, nullable=False)
+    run_key = Column(Text, nullable=False)
+    crawl_log_id = Column(Integer, ForeignKey("crawl_log.id"))
+    previous_valid_snapshot_id = Column(Integer)
+    status = Column(Text, nullable=False)
+    is_baseline = Column(Boolean, nullable=False, default=False)
+    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime)
+    source_total = Column(Integer)
+    fetched_total = Column(Integer, nullable=False, default=0)
+    indexed_total = Column(Integer, nullable=False, default=0)
+    excluded_total = Column(Integer, nullable=False, default=0)
+    failed_total = Column(Integer, nullable=False, default=0)
+    position_keys = Column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=_sa_text("'[]'"),
+    )
+    position_set_hash = Column(Text)
+    response_hash = Column(Text)
+    parser_version = Column(Text, nullable=False)
+    completeness_status = Column(Text, nullable=False)
+    comparison_status = Column(Text, nullable=False, default="pending")
+    error = Column(Text)
+
+    company = relationship("Company", back_populates="source_snapshots")
+    previous_valid_snapshot = relationship(
+        "SourceSnapshot",
+        remote_side=[id, company_id, source_id],
+        foreign_keys=[previous_valid_snapshot_id, company_id, source_id],
+        viewonly=True,
+    )
+    change_events = relationship(
+        "CompanyChangeEvent", back_populates="snapshot", viewonly=True
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('success', 'failed')", name="chk_snapshot_status"
+        ),
+        CheckConstraint(
+            "completeness_status IN "
+            "('count_matched', 'pagination_verified', 'incomplete', 'failed')",
+            name="chk_snapshot_completeness_status",
+        ),
+        CheckConstraint(
+            "comparison_status IN "
+            "('pending', 'baseline', 'compared', 'suppressed', 'failed')",
+            name="chk_snapshot_comparison_status",
+        ),
+        CheckConstraint(
+            "(comparison_status = 'baseline' AND is_baseline = TRUE) OR "
+            "(comparison_status <> 'baseline' AND is_baseline = FALSE)",
+            name="chk_snapshot_baseline_identity",
+        ),
+        CheckConstraint(
+            "comparison_status <> 'baseline' OR "
+            "(status = 'success' AND "
+            "completeness_status IN ('count_matched', 'pagination_verified') AND "
+            "previous_valid_snapshot_id IS NULL)",
+            name="chk_snapshot_baseline_valid",
+        ),
+        CheckConstraint(
+            "comparison_status <> 'compared' OR "
+            "(status = 'success' AND "
+            "completeness_status IN ('count_matched', 'pagination_verified') AND "
+            "previous_valid_snapshot_id IS NOT NULL AND is_baseline = FALSE)",
+            name="chk_snapshot_compared_valid",
+        ),
+        CheckConstraint(
+            "status <> 'failed' OR comparison_status = 'failed'",
+            name="chk_snapshot_failed_comparison",
+        ),
+        CheckConstraint(
+            "(source_total IS NULL OR source_total >= 0) AND "
+            "fetched_total >= 0 AND indexed_total >= 0 AND "
+            "excluded_total >= 0 AND failed_total >= 0",
+            name="chk_snapshot_counts",
+        ),
+        CheckConstraint(
+            "fetched_total = indexed_total + excluded_total + failed_total",
+            name="chk_snapshot_accounted_counts",
+        ),
+        CheckConstraint(
+            "completeness_status <> 'count_matched' OR "
+            "(source_total IS NOT NULL AND source_total = fetched_total)",
+            name="chk_snapshot_source_total_matched",
+        ),
+        CheckConstraint(
+            "comparison_status NOT IN ('baseline', 'compared') OR "
+            "(completed_at IS NOT NULL AND position_set_hash IS NOT NULL)",
+            name="chk_snapshot_comparison_evidence",
+        ),
+        CheckConstraint(
+            "completed_at IS NULL OR completed_at >= fetched_at",
+            name="chk_snapshot_time_order",
+        ),
+        UniqueConstraint(
+            "id",
+            "company_id",
+            "source_id",
+            name="uq_snapshot_identity_scope",
+        ),
+        ForeignKeyConstraint(
+            ["previous_valid_snapshot_id", "company_id", "source_id"],
+            [
+                "source_snapshot.id",
+                "source_snapshot.company_id",
+                "source_snapshot.source_id",
+            ],
+            name="fk_snapshot_previous_scope",
+        ),
+        Index("idx_snapshot_source_fetched", "source_id", "fetched_at"),
+        Index(
+            "idx_snapshot_source_run_key",
+            "source_id",
+            "run_key",
+            unique=True,
+        ),
+        Index(
+            "idx_snapshot_one_baseline_per_source",
+            "source_id",
+            unique=True,
+            sqlite_where=_sa_text("comparison_status = 'baseline'"),
+            postgresql_where=_sa_text("comparison_status = 'baseline'"),
+        ),
+        Index(
+            "idx_snapshot_one_comparison_per_previous",
+            "previous_valid_snapshot_id",
+            unique=True,
+            sqlite_where=_sa_text("comparison_status = 'compared'"),
+            postgresql_where=_sa_text("comparison_status = 'compared'"),
+        ),
+        Index("idx_snapshot_company_fetched", "company_id", "fetched_at"),
+        Index("idx_snapshot_previous_valid", "previous_valid_snapshot_id"),
+        Index("idx_snapshot_status", "status", "completeness_status"),
+    )
+
+
+class CompanyChangeEvent(Base):
+    """Auditable company-level change used by the global M1 dashboard."""
+
+    __tablename__ = "company_change_event"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, ForeignKey("company.id"), nullable=False)
+    campaign_id = Column(Integer)
+    snapshot_id = Column(Integer, nullable=False)
+    source_id = Column(Text, nullable=False)
+    dedup_key = Column(Text, nullable=False, unique=True)
+    event_type = Column(Text, nullable=False)
+    added_count = Column(Integer, nullable=False, default=0)
+    reopened_count = Column(Integer, nullable=False, default=0)
+    closed_count = Column(Integer, nullable=False, default=0)
+    changed_count = Column(Integer, nullable=False, default=0)
+    reporting_date_cn = Column(Date, nullable=False)
+    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    computation_status = Column(Text, nullable=False, default="computed")
+    evidence = Column(
+        JSON,
+        nullable=False,
+        default=dict,
+        server_default=_sa_text("'{}'"),
+    )
+
+    company = relationship("Company", back_populates="change_events")
+    campaign = relationship(
+        "RecruitmentCampaign", back_populates="change_events", viewonly=True
+    )
+    snapshot = relationship(
+        "SourceSnapshot", back_populates="change_events", viewonly=True
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["campaign_id", "company_id"],
+            [
+                "recruitment_campaign.id",
+                "recruitment_campaign.company_id",
+            ],
+            name="fk_company_change_campaign_scope",
+        ),
+        ForeignKeyConstraint(
+            ["snapshot_id", "company_id", "source_id"],
+            [
+                "source_snapshot.id",
+                "source_snapshot.company_id",
+                "source_snapshot.source_id",
+            ],
+            name="fk_company_change_snapshot_scope",
+        ),
+        CheckConstraint(
+            "event_type IN ('campaign_started', 'campaign_updated', "
+            "'campaign_closed', 'positions_changed', 'position_reopened', "
+            "'page_updated', 'source_degraded', 'source_recovered')",
+            name="chk_company_change_event_type",
+        ),
+        CheckConstraint(
+            "computation_status IN ('computed', 'suppressed', 'review_required')",
+            name="chk_company_change_computation_status",
+        ),
+        CheckConstraint(
+            "added_count >= 0 AND reopened_count >= 0 AND "
+            "closed_count >= 0 AND changed_count >= 0",
+            name="chk_company_change_counts",
+        ),
+        CheckConstraint(
+            "event_type <> 'positions_changed' OR "
+            "(added_count + closed_count + changed_count > 0 AND "
+            "reopened_count = 0)",
+            name="chk_company_change_positions_counts",
+        ),
+        CheckConstraint(
+            "event_type <> 'position_reopened' OR "
+            "(reopened_count > 0 AND added_count = 0 AND "
+            "closed_count = 0 AND changed_count = 0)",
+            name="chk_company_change_reopened_counts",
+        ),
+        CheckConstraint(
+            "event_type IN ('positions_changed', 'position_reopened') OR "
+            "(added_count = 0 AND reopened_count = 0 AND "
+            "closed_count = 0 AND changed_count = 0)",
+            name="chk_company_change_non_position_counts",
+        ),
+        CheckConstraint(
+            "event_type NOT IN "
+            "('campaign_started', 'campaign_updated', 'campaign_closed') OR "
+            "campaign_id IS NOT NULL",
+            name="chk_company_change_campaign_required",
+        ),
+        Index("idx_company_change_date", "reporting_date_cn", "event_type"),
+        Index("idx_company_change_company", "company_id", "occurred_at"),
+        Index("idx_company_change_snapshot", "snapshot_id"),
     )
 
 
@@ -416,4 +1035,9 @@ from sqlalchemy import event as sa_event
 
 @sa_event.listens_for(Application, "before_update")
 def _application_before_update(mapper, connection, target):
+    target.updated_at = datetime.utcnow()
+
+
+@sa_event.listens_for(Company, "before_update")
+def _company_before_update(mapper, connection, target):
     target.updated_at = datetime.utcnow()

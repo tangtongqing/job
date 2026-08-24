@@ -1,5 +1,7 @@
 # 系统架构设计
 
+> **M1 架构说明（2026-08-05）**：本文主体描述 M0 当前架构。§5.2 与 §9 的旧版 M1 多租户预留不再直接指导下一阶段实现；已确认的 M1 是个人 SaaS，先以 `User` / `user_id` 建立数据归属，不提前引入 tenant、organization 或 RBAC。新的目标约束与实施顺序见 [M1 PRD](../product/PRD-M1.md) 和 [M1 实施计划](../product/M1-IMPLEMENTATION-PLAN.md)，具体供应商与迁移方案以待评审 ADR 为准。
+
 > 阶段 2 地基产出。本文档明确分层、技术选型细化、部署拓扑、目录结构落地，可直接指导 TASK-007~011。
 >
 > ---
@@ -891,9 +893,14 @@ async def auth_middleware(request: Request, call_next):
 
 ### 9.4 采集合规预留（已占位）
 
-`crawler/robots.py` + `crawler/rate_limiter.py` 已在目录结构（v2 新增）。M0 实现 fail-closed robots 检查 + 速率限制；M1 额外加：
-- API 优先策略（优先用平台官方 API，降级到爬虫）
-- 合规审计日志（记录每次采集的 robots 检查结果）
+`crawler/robots.py` + `crawler/rate_limiter.py` 已在目录结构（v2 新增）。M0 实现 fail-closed robots 检查 + 速率限制；M1 不再采用“平台 API 降级到平台爬虫”，而是按[国内校招官方信息采集架构](domestic-campus-ingestion.md)增加：
+
+- 国内目标公司与来源注册表；
+- 招聘活动、正式公告、岗位和来源证据分层；
+- 企业官网/ATS 模板族优先，政府、高校和公众号公开链接做发现与核验；
+- 逐源 robots、条款、授权与变更审计；
+- BOSS、猎聘等无书面授权时 fail closed，不通过低频或技术规避接入；
+- 来源健康、覆盖率、发现延迟和人工复核队列。
 
 ### 9.5 AI 解析配额预留
 

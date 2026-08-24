@@ -247,6 +247,7 @@ def test_greenhouse_adapter_parses_full_job():
         config={
             "source_name": "greenhouse_example",
             "board_token": "example",
+            "sample_mode": True,
             "keywords": ["product manager"],
             "max_jobs": 5,
             "min_interval_seconds": 0,
@@ -270,6 +271,43 @@ def test_greenhouse_adapter_parses_full_job():
     assert job["source_url"] == job["apply_url"]
     assert job["published_at"] is not None
     assert job["deadline"] is not None
+
+
+def test_greenhouse_complete_collection_returns_every_published_job():
+    payload = {
+        "jobs": [
+            {"id": 1, "title": "Software Engineer", "updated_at": "2026-08-04"},
+            {"id": 2, "title": "Finance Graduate", "updated_at": "2026-08-05"},
+        ]
+    }
+    adapter = GreenhouseAdapter(
+        config={
+            "source_name": "greenhouse_complete",
+            "board_token": "complete",
+            "min_interval_seconds": 0,
+        },
+        json_fetcher=lambda url: payload,
+    )
+
+    assert [job["id"] for job in adapter.fetch()] == [2, 1]
+
+
+@pytest.mark.parametrize(
+    "sample_control",
+    [
+        {"keywords": ["product"]},
+        {"max_jobs": 10},
+    ],
+)
+def test_greenhouse_complete_collection_rejects_silent_restrictions(sample_control):
+    with pytest.raises(ValueError, match="Complete collection does not allow"):
+        GreenhouseAdapter(
+            config={
+                "source_name": "greenhouse_complete",
+                "board_token": "complete",
+                **sample_control,
+            }
+        )
 
 
 @pytest.mark.parametrize(

@@ -27,11 +27,16 @@ from src.crawler.adapters.factory import create_adapter
 from src.crawler.compliance.robots import RobotsChecker
 from src.crawler.config import CrawlerConfig, load_crawler_config
 from src.crawler.normalizer import normalize_job
+from src.crawler.source_registry import (
+    CompanySourceRegistry,
+    load_company_source_registry,
+)
 from src.crawler import dedup
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_BATCH_SIZE = 20
+REGISTRY_REQUIRED_ADAPTERS = {"cmb_campus"}
 
 
 class CrawlService:
@@ -42,12 +47,14 @@ class CrawlService:
         batch_size: int | None = None,
         robots_checker=None,
         config: CrawlerConfig | None = None,
+        source_registry: CompanySourceRegistry | None = None,
     ):
         self.config = config or load_crawler_config()
         self.batch_size = batch_size or self.config.global_config.batch_size
         self.robots_checker = robots_checker or RobotsChecker(
             manual_override=self.config.global_config.manual_robots_override
         )
+        self.source_registry = source_registry
 
     def crawl_source(
         self,
@@ -82,6 +89,7 @@ class CrawlService:
                     f"采集源已禁用: {source}",
                     details={"source": source, "enabled": False},
                 )
+            self._assert_registry_allows(source_cfg)
             adapter_config = {
                 "source_name": source_cfg.name,
                 **source_cfg.options,
@@ -121,6 +129,35 @@ class CrawlService:
         finally:
             # 8. 无论成功失败都 close adapter（无论是否本方法创建）
             adapter.close()
+
+    def _assert_registry_allows(self, source_cfg) -> None:
+        registry_source_id = str(
+            source_cfg.options.get("registry_source_id", "")
+        ).strip()
+        if source_cfg.adapter in REGISTRY_REQUIRED_ADAPTERS and not registry_source_id:
+            raise ValidationError(
+                f"采集源未绑定官方来源注册表: {source_cfg.name}",
+                details={"source": source_cfg.name},
+            )
+        if not registry_source_id:
+            return
+
+        registry = self.source_registry or load_company_source_registry()
+        registered = registry.get_source(registry_source_id)
+        if registered is None:
+            raise ValidationError(
+                f"官方来源注册记录不存在: {registry_source_id}",
+                details={"source": source_cfg.name},
+            )
+        if not registered.enabled:
+            raise ValidationError(
+                f"官方来源尚未批准自动采集: {registry_source_id}",
+                details={
+                    "source": source_cfg.name,
+                    "registry_status": registered.status,
+                    "automation_decision": registered.automation_decision,
+                },
+            )
 
     def _save_jobs(self, db: Session, source: str, jobs: list[dict]) -> int:
         """去重 + 批量写入 Job。返回成功写入数。"""

@@ -3,7 +3,10 @@
 > TASK-007 产出。基于 PRD v3 §六数据模型 + TASK-006 架构决策，落地为完整的数据库物理设计。
 >
 > ---
-> **版本**：v2（主智能体校准版）
+> **版本**：v3（M1 公司招聘雷达数据底座）
+> **v3 修订说明**：保留 M0 的 7 表投递管理基线，新增公司层级、招聘活动、活动届别、轻量岗位引用、来源快照和公司变化事件；公共事实不带用户归属，也不保存完整 JD。正式 schema 以 Alembic `d8cf04cfe08c → 8418f8d1585a` 为准。
+>
+> **v2 历史修订说明**：
 > **v2 修订说明**：v1 结构完整（7 表 + 索引 + DDL），但存在 6 处硬伤，v2 集中修订：
 > 1. **【严重】状态枚举中英文矛盾**：v1 §4.1 说用英文 code，但 §3/§6 的 CHECK 约束和 DDL 用中文。代码层（英文）和数据库约束（中文）会直接冲突。v2 统一为**所有枚举字段用英文 code 存储**，中文由应用层映射
 > 2. **【严重】事务伪代码破坏原子性**：v1 把"读取+校验"放在 try 外，只有写入在事务里，违背了 TASK-006 v2 "读取-校验-写入同事务"的设计。v2 改为 `with session.begin():` 包裹全流程
@@ -36,13 +39,16 @@
 | INTEGER | INTEGER | 自增主键 |
 | TEXT | VARCHAR/TEXT | 字符串 |
 | DATETIME | TIMESTAMP | 时间戳 |
+| DATE | DATE | 中国区报表日期 |
 | BOOLEAN | BOOLEAN | 布尔值 |
+| FLOAT | DOUBLE PRECISION | 分类置信度 |
+| JSON | JSON/JSONB | 证据、轻量列表；不承担核心届别筛选 |
 
 > 避免使用 SQLite 特有类型（如 BLOB），确保迁移兼容。
 
 ---
 
-## 二、完整 ER 图
+## 二、ER 图
 
 ```mermaid
 erDiagram
@@ -133,6 +139,72 @@ erDiagram
         TEXT error
         DATETIME started_at
         DATETIME finished_at
+    }
+```
+
+### 2.1 M1 公共招聘雷达扩展
+
+```mermaid
+erDiagram
+    Company ||--o{ Company : "集团/分支"
+    Company ||--o{ RecruitmentCampaign : "发布活动"
+    RecruitmentCampaign ||--o{ CampaignGraduationYear : "面向届别"
+    Company ||--o{ ObservedPositionRef : "公开岗位引用"
+    RecruitmentCampaign o|--o{ ObservedPositionRef : "归入活动"
+    Company ||--o{ SourceSnapshot : "采集快照"
+    SourceSnapshot o|--o| SourceSnapshot : "比较前一有效快照"
+    SourceSnapshot ||--o{ CompanyChangeEvent : "产生可审计变化"
+    RecruitmentCampaign o|--o{ CompanyChangeEvent : "关联活动"
+
+    RecruitmentCampaign {
+        INTEGER id PK
+        INTEGER company_id FK
+        TEXT source_id
+        TEXT campaign_key
+        TEXT recruitment_type
+        TEXT internship_type
+        TEXT graduation_years_status
+        TEXT status
+    }
+
+    CampaignGraduationYear {
+        INTEGER campaign_id PK_FK
+        INTEGER graduation_year PK
+    }
+
+    ObservedPositionRef {
+        INTEGER id PK
+        INTEGER company_id FK
+        INTEGER campaign_id FK
+        TEXT source_id
+        TEXT dedupe_key
+        TEXT identity_kind
+        TEXT title
+        TEXT status
+        TEXT content_fingerprint
+    }
+
+    SourceSnapshot {
+        INTEGER id PK
+        INTEGER company_id FK
+        TEXT source_id
+        TEXT run_key
+        INTEGER previous_valid_snapshot_id FK
+        TEXT completeness_status
+        TEXT comparison_status
+        BOOLEAN is_baseline
+    }
+
+    CompanyChangeEvent {
+        INTEGER id PK
+        INTEGER company_id FK
+        INTEGER snapshot_id FK
+        TEXT source_id
+        TEXT event_type
+        INTEGER added_count
+        INTEGER reopened_count
+        INTEGER closed_count
+        DATE reporting_date_cn
     }
 ```
 
@@ -346,21 +418,35 @@ CREATE INDEX idx_sub_company ON subscription(company) WHERE company IS NOT NULL;
 
 ### 3.6 Company（公司）
 
-**表名**：`company` | **中文名**：公司表 | **用途**：存储公司信息（可选）
+**表名**：`company` | **中文名**：公司主数据 | **用途**：作为全站公司统计、集团去重与官方来源关联的公共根对象
 
 | 字段名 | SQLite 类型 | PG 类型 | 约束 | 默认值 | 说明 |
 |--------|-------------|---------|------|--------|------|
 | id | INTEGER | INTEGER | PK, AUTOINCREMENT | - | 主键 |
+| parent_company_id | INTEGER | INTEGER | FK → company.id | NULL | 集团/分支关系；不得指向自身 |
+| registry_id | TEXT | TEXT | 部分唯一 | NULL | 对应版本化公司注册表的稳定键 |
 | name | TEXT | VARCHAR(200) | NOT NULL, UNIQUE | - | 公司名 |
+| aliases | JSON | JSON/JSONB | NOT NULL | `[]` | 别名，仅用于识别与展示 |
 | industry | TEXT | VARCHAR(100) | - | NULL | 行业 |
 | category | TEXT | VARCHAR(50) | - | NULL | 公司类型（互联网大厂/创业公司/外企/国企...） |
+| ownership_type | TEXT | TEXT | - | NULL | 所有制/资本类型 |
 | website | TEXT | VARCHAR(500) | - | NULL | 官网 |
+| status | TEXT | TEXT | NOT NULL, CHECK | candidate | candidate / verified / monitoring / paused / retired |
+| first_verified_at | DATETIME | TIMESTAMP | 条件必填 | NULL | 首次完成来源核验时间；verified/monitoring 必填 |
+| last_observed_at | DATETIME | TIMESTAMP | - | NULL | 最近有效观测时间 |
+| created_at | DATETIME | TIMESTAMP | NOT NULL | CURRENT_TIMESTAMP | 创建时间 |
+| updated_at | DATETIME | TIMESTAMP | NOT NULL | CURRENT_TIMESTAMP | 更新时间 |
 
 **索引**：
 ```sql
 CREATE UNIQUE INDEX idx_company_name ON company(name);
 CREATE INDEX idx_company_category ON company(category) WHERE category IS NOT NULL;
+CREATE UNIQUE INDEX idx_company_registry_id ON company(registry_id) WHERE registry_id IS NOT NULL;
+CREATE INDEX idx_company_parent ON company(parent_company_id);
+CREATE INDEX idx_company_status ON company(status);
 ```
+
+`candidate` 公司可以保留待核验；只有写入 `first_verified_at` 后才能进入 `verified` 或 `monitoring`，避免“未核验公司”进入首页新增口径。集团与分支分别建档，通过 `parent_company_id` 聚合，不再靠名称猜测去重。
 
 ---
 
@@ -390,6 +476,82 @@ CREATE INDEX idx_crawl_started_at ON crawl_log(started_at DESC);
 ALTER TABLE crawl_log ADD CONSTRAINT chk_crawl_status 
 CHECK (status IN ('success', 'failed', 'skipped'));
 ```
+
+---
+
+### 3.8 RecruitmentCampaign 与 CampaignGraduationYear（招聘活动与届别）
+
+`recruitment_campaign` 表示一次公司级招聘活动，和岗位列表分开存在。公告先发布、岗位稍后开放时，也可以先建立活动。
+
+| 核心字段 | 说明 |
+|---|---|
+| company_id / source_id / campaign_key | 公司、首要发现来源、公司内稳定活动键；`(company_id, campaign_key)` 唯一 |
+| season / campaign_year | autumn、spring、early、makeup、rolling、unknown；活动年份不等于毕业届别 |
+| recruitment_type / internship_type | 正式校招、毕业生项目、实习；实习再分暑期、日常、寒假和未知 |
+| graduation_years_status | known / unknown，用于区分“未识别”与明确届别集合 |
+| status / start_at / deadline / official_url | 活动状态、时间与官方入口 |
+| classification_confidence / classification_evidence | 分类置信度及证据；低置信度仍保留为 unknown |
+
+`campaign_graduation_year` 使用 `(campaign_id, graduation_year)` 复合主键，并建立 `(graduation_year, campaign_id)` 索引。毕业年份限制在 2000–2200；2027/2028 等多届别可以直接在 SQLite 与 PostgreSQL 中用同一关联查询筛选，不依赖 JSON 方言差异。
+
+### 3.9 ObservedPositionRef（公共轻量岗位引用）
+
+该表只记录判断岗位集合变化所需的轻量事实，不保存完整 JD、要求或用户私人快照。
+
+| 核心字段 | 说明 |
+|---|---|
+| company_id / campaign_id / source_id | 公司必填；活动可空；复合外键阻止岗位串到其他公司活动 |
+| dedupe_key | 来源内稳定身份键；与 source_id 组成唯一索引 |
+| identity_kind | external_id / canonical_url / fingerprint，明确本次去重证据层级 |
+| external_job_id / canonical_url | 均可空，但必须满足 identity_kind 对应的证据要求 |
+| title / locations / category | 标题、城市与轻量岗位类别；未知类别不丢弃 |
+| recruitment_type / internship_type / graduation_years | 岗位级分类证据；不作为活动届别主筛选事实 |
+| first_seen_at / last_seen_at / closed_at / status | 发现与关闭生命周期 |
+| content_fingerprint / missing_count | 内容变化指纹与连续缺失次数；身份键和内容变化分开 |
+
+### 3.10 SourceSnapshot（来源快照）
+
+每次正式来源采集写一条快照。`run_key` 与 `source_id` 唯一，保证任务重试幂等；`previous_valid_snapshot_id` 只能指向同公司、同来源的上一条有效快照。
+
+| 字段组 | 说明 |
+|---|---|
+| status | success / failed，表示抓取结果 |
+| completeness_status | count_matched / pagination_verified / incomplete / failed，表示完整性证据 |
+| comparison_status | pending / baseline / compared / suppressed / failed，表示是否允许参与差分 |
+| source_total / fetched_total / indexed_total / excluded_total / failed_total | 源端总数与处理对账 |
+| position_keys / position_set_hash / response_hash | 轻量身份集合及审计摘要 |
+| parser_version / fetched_at / completed_at / error | 可复现版本、时间与错误 |
+
+约束规则：
+
+- 每个来源最多一个 baseline；首个完整性通过的成功快照才能成为 baseline，且不能有 previous；
+- compared 必须是完整性通过的成功快照，并引用上一条有效快照；
+- incomplete 快照只能 suppressed，不能推进缺失次数或生成新增/关闭；
+- failed 快照的 comparison_status 必须为 failed；
+- 同一 previous 最多生成一个 compared 后继，防止并发任务形成差分分叉。
+
+### 3.11 CompanyChangeEvent（公司变化事件）
+
+首页所有“今日新增公司/岗位/关闭/变化”都必须从该表聚合，并能回溯到快照与证据。
+
+| 核心字段 | 说明 |
+|---|---|
+| company_id / campaign_id / snapshot_id / source_id | 变化作用域；复合外键阻止跨公司、跨来源串联 |
+| dedup_key | 全局唯一事件幂等键 |
+| event_type | campaign_started / campaign_updated / campaign_closed / positions_changed / position_reopened / page_updated / source_degraded / source_recovered |
+| added_count / reopened_count / closed_count / changed_count | 新增、重新开放、关闭、内容变化分别计数，重开不冒充新增 |
+| occurred_at | 统一保存 UTC 发生时间 |
+| reporting_date_cn | 由 occurred_at 转 Asia/Shanghai 后生成的首页归属日期 |
+| computation_status / evidence | computed / suppressed / review_required 与审计证据 |
+
+首个 baseline 只建立参考集合，不创建可计数变化事件。`reporting_date_cn` 的时区转换由下一阶段差分服务统一完成，禁止由数据库当前时区隐式推断。
+
+### 3.12 公共与私人数据边界
+
+- Company、RecruitmentCampaign、CampaignGraduationYear、ObservedPositionRef、SourceSnapshot、CompanyChangeEvent 都是公共事实，不带 `user_id`；
+- 现有 Job 仍是 M0 兼容表；完整 JD 与用户收藏后的岗位快照将在私人数据迁移中增加 owner 归属；
+- `source_id` 是 `config/company_sources.json` 中的稳定字符串键，不伪造数据库整数来源外键；
+- SQLite 测试显式启用外键；PostgreSQL 生产验证仍属于 R1 的独立集成测试门禁。
 
 ---
 
@@ -606,7 +768,9 @@ WHERE scheduled_at IS NOT NULL AND occurred_at IS NULL;
 
 ## 六、初始化与迁移
 
-### 6.1 初始化 SQL（SQLite 方言，v2 统一英文 code）
+### 6.1 M0 基线 SQL（SQLite 方言，历史参考）
+
+> 下列 SQL 仅描述 `d8cf04cfe08c` 的 7 表历史基线。M1 扩展必须通过 Alembic 执行，不要复制本段手工建生产库。
 
 ```sql
 -- 岗位表
@@ -756,33 +920,31 @@ CREATE INDEX idx_crawl_started_at ON crawl_log(started_at DESC);
 
 **迁移目录结构**：
 ```
-src/db/migrations/
+alembic/
 ├── env.py
 ├── script.py.mako
 └── versions/
-    └── 001_initial.py
+    ├── d8cf04cfe08c_existing_schema_baseline.py
+    └── 8418f8d1585a_add_recruitment_radar_public_models.py
 ```
 
-**首次迁移命令**：
-```bash
-# 初始化 Alembic
-alembic init src/db/migrations
+**空库升级**：
 
-# 生成首次迁移
-alembic revision --autogenerate -m "initial"
-
-# 执行迁移
-alembic upgrade head
+```powershell
+python -m alembic upgrade head
 ```
 
-**未来加字段的迁移示例**：
-```bash
-# 修改 ORM 模型后，自动生成迁移
-alembic revision --autogenerate -m "add_new_field"
+**验证模型与迁移一致**：
 
-# 执行迁移
-alembic upgrade head
+```powershell
+python -m alembic check
 ```
+
+已有 pre-Alembic 数据库不能直接执行或盲目 stamp。`src/db/schema_migrations.py` 会同时比较 SQLAlchemy 反射结构与规范化后的 `sqlite_master` DDL：除表、列、类型、空值、默认值、主键、唯一约束、检查约束和外键外，也覆盖部分索引谓词、字符串字面量大小写、索引排序规则/顺序及 `STRICT`、`WITHOUT ROWID` 等 SQLite 语义。只有指纹完全一致时才生成一致性备份、stamp `d8cf04cfe08c` 并升级到 head；漂移库在修改前失败。
+
+迁移全程持有 `<database>.migration.lock` 跨进程独占锁（Windows 使用 `msvcrt`、Unix 使用 `flock`），从首次读取版本一直覆盖备份、升级/恢复和最终 head 校验；超时会关闭失败。既有备份文件不会被覆盖，失败恢复后才释放锁。当前仓库的真实 `data/jobpulse.db` 尚未自动迁移，避免在开发过程中改变用户数据，但其副本已通过完整接管验证。
+
+自动化测试覆盖：空库升到基线、写入既有 Company、升级 head、模型对比、降级回基线、再次升级；已知旧库的备份/stamp/升级；谓词、字面量与 COLLATE 漂移拒绝；备份不覆盖与失败恢复；线程及 Windows spawn 跨进程串行；当前仓库数据库副本升级前后 M0 表计数一致。`start.ps1`、`init_db` 与 Docker 已统一走迁移入口；生产 schema 健康检查、独立多副本迁移任务和真实 PostgreSQL 执行仍属于 R1 门禁。
 
 ### 6.3 SQLite → PostgreSQL 迁移注意事项
 
@@ -803,4 +965,4 @@ alembic upgrade head
 
 ---
 
-*文档版本：v1.0 | 创建日期：2026-06-22*
+*文档版本：v3.0 | 创建日期：2026-06-22 | 最近更新：2026-08-18*

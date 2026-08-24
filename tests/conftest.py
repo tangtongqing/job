@@ -1,7 +1,7 @@
 """pytest 配置：用内存 SQLite，不污染 data/jobpulse.db。"""
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
 from src.db.session import Base
@@ -11,6 +11,13 @@ import src.db.models  # noqa: F401  触发模型注册
 @pytest.fixture()
 def engine():
     eng = create_engine("sqlite://")
+
+    @event.listens_for(eng, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(eng)
     return eng
 

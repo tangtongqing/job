@@ -1,5 +1,5 @@
-# 采集源配置（crawler-module.md §三 + 返工任务 §4）
-# 高风险来源默认 enabled: false
+# 采集源配置示例（国内校招官方来源优先）
+# 所有来源先登记、审核并通过契约测试，再逐源启用。
 
 global:
   crawl_interval_minutes: 60
@@ -9,14 +9,22 @@ global:
 
 sources:
   company_website:
-    enabled: true            # 合规风险低，默认开
+    enabled: false           # 填写审核通过的国内官方来源后再开启
     adapter: company
-    base_urls: []            # 实际使用时填入企业官网 URL
+    base_urls: []            # 不得填入未经授权的招聘平台 URL
+
+  cmb_campus:
+    enabled: false           # 注册表与运行配置都批准后才可开启
+    adapter: cmb_campus
+    registry_source_id: cmb_campus
+    company: 招商银行
+    page_size: 50
+    min_interval_seconds: 1
 
   boss:
-    enabled: false           # 高风险，默认关
+    enabled: false           # 用户协议限制未经许可抓取，只保留合规占位
     adapter: boss
 
   nowcoder:
-    enabled: false           # 高风险，默认关
+    enabled: false           # 条款与授权未确认前默认关闭
     adapter: nowcoder

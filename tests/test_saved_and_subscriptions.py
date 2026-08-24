@@ -137,13 +137,14 @@ def test_demo_reset_is_repeatable_and_restores_full_scenario(client):
     assert client.get("/api/v1/subscriptions").json()["meta"]["total"] == 3
 
 
-def test_demo_reset_creates_schema_for_a_fresh_database():
-    """全新数据库不手动跑 init_db，也能直接执行一键重置。"""
+def test_demo_reset_uses_an_initialized_schema():
+    """Demo reset only changes data; schema creation belongs to migrations."""
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    Base.metadata.create_all(engine)
     test_session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     def override_get_db():

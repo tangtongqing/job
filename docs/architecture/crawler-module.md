@@ -2,6 +2,8 @@
 
 > TASK-009 产出。基于 TASK-006/007/008 的架构决策，详细设计采集模块的适配器、调度、清洗、去重、核验、合规控制。
 >
+> **M1 修订（2026-08-05）**：本文保留 M0 实现细节；M1 数据主干已经切换为国内校招官方来源，招聘活动/公告/岗位分层、来源注册表、模板族适配器和覆盖率以[国内校招官方信息采集架构](domestic-campus-ingestion.md)为准。本文中曾提出的随机 UA、代理规避或“平台低频少量抓取”不再有效。
+>
 > ---
 > **版本**：v2（主智能体校准版）
 > **v2 修订说明**：v1 结构完整（3 适配器 + 三层去重 + 合规模块），但存在 8 处硬伤，v2 集中修订：
@@ -20,7 +22,7 @@
 
 ### 1.1 一句话定位
 
-> 采集模块是系统的数据命脉——从多个招聘平台抓取岗位信息，清洗去重后入库，为投递管理和看板提供数据基础。
+> 采集模块从已登记的国内企业官方招聘入口和可信公共发现渠道获取校招活动、公告与岗位，核验去重后入库，为订阅、投递管理和覆盖看板提供数据基础。
 
 ### 1.2 模块边界
 
@@ -48,8 +50,8 @@
        │
        ▼
 ┌─────────────┐
-│  外部网站   │
-│ (BOSS/牛客) │
+│ 国内官方源  │
+│ (官网/ATS)  │
 └─────────────┘
 ```
 
@@ -82,7 +84,7 @@ class BaseAdapter(ABC):
         if self._client is None:
             self._client = Client(
                 timeout=self.config.get('timeout', 30),
-                headers={'User-Agent': self._get_random_ua()}
+                headers={'User-Agent': self.config.get('user_agent', 'JobPulseSourceMonitor/1.0')}
             )
         return self._client
     
@@ -130,125 +132,42 @@ class BaseAdapter(ABC):
             self._client = None
         # 子类如用 Playwright，override 此方法关闭 browser
     
-    def _get_random_ua(self) -> str:
-        """随机 User-Agent"""
-        user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            # ... 更多 UA
-        ]
-        import random
-        return random.choice(user_agents)
 ```
 
 ### 2.2 各源适配器
 
 #### CompanyWebsiteAdapter（企业官网）
 
-**合规风险**：低 ✅
+**合规风险**：逐源评估，不能因为是企业官网就自动判定为低风险
 
 | 项目 | 说明 |
 |------|------|
-| 目标 URL | 各企业招聘官网（如 jobs.bytedance.com） |
+| 目标 URL | 来源注册表中审核通过的国内企业招聘官网、校招专题或公开 ATS |
 | 抓取方式 | httpx.Client（静态页面）或 Playwright（动态渲染） |
-| 字段选择器 | CSS 选择器（各网站不同，配置化） |
-| 反爬应对 | 低频请求 + 随机 UA |
-| 合规评估 | robots.txt 通常允许；数据公开；合规风险最低 |
+| 解析方式 | 优先模板族/结构化接口；少量公司差异配置 |
+| 访问控制 | 声明身份的固定 UA + 逐域名限速 + fail closed |
+| 合规评估 | 记录 robots、条款、检查日期和证据；无法确认允许时不采集 |
 
 **配置示例**：
 
 ```yaml
 # config/sources.yaml
-company_websites:
-  - name: "字节跳动"
-    url: "https://jobs.bytedance.com/experienced/position"
-    selector:
-      job_list: ".job-list-item"
-      title: ".job-title"
-      location: ".job-location"
-      salary: ".job-salary"
-    enabled: true
+company_sources:
+  - company_id: "example-company"
+    source_type: "official_campus_site"
+    canonical_url: "https://example.com/campus"
+    ats_family: "custom"
+    compliance_status: "approved"
+    enabled: false  # 完成来源审核和契约测试后逐源开启
 ```
 
 ---
 
 #### BossAdapter（BOSS 直聘）
 
-**合规风险**：高 ⚠️
+**决策**：未经 BOSS 书面许可、官方 API 或数据合作，不采集。
 
-| 项目 | 说明 |
-|------|------|
-| 目标 URL | https://www.zhipin.com/web/geek/jobs |
-| 抓取方式 | Playwright（动态渲染，反爬强） |
-| 字段选择器 | XPath + 页面结构分析 |
-| 反爬应对 | 低频（≤1次/分钟）+ 随机 UA + 检测验证码 |
-| 合规评估 | robots.txt 有限制；ToS 禁止爬虫；**Demo 阶段低频少量采集** |
-
-**反爬应对策略**：
-
-```python
-class BossAdapter(BaseAdapter):
-    def __init__(self, config: Dict):
-        super().__init__(config)
-        # v2: Playwright 资源懒加载（与基类的 httpx.Client 懒加载一致）
-        self._playwright = None
-        self._browser = None
-    
-    def _ensure_browser(self):
-        """v2: Playwright browser 懒加载 + 生命周期管理"""
-        if self._browser is None:
-            from playwright.sync_api import sync_playwright
-            self._playwright = sync_playwright().start()
-            self._browser = self._playwright.chromium.launch(headless=True)
-        return self._browser
-    
-    def fetch(self, page: int = 1) -> List[Dict]:
-        """抓取（v2: 用 context manager 保证 page 清理）"""
-        browser = self._ensure_browser()
-        # 每次抓取创建独立 context/page，用完即关，避免状态泄漏
-        context = browser.new_context(user_agent=self._get_random_ua())
-        page_obj = context.new_page()
-        try:
-            page_obj.goto(f"{self.config['url']}?page={page}")
-            # ... 解析逻辑
-            return raw_jobs
-        finally:
-            # v2 关键：无论成功失败都关闭 context，防止资源泄漏
-            context.close()
-    
-    def should_crawl(self) -> bool:
-        """BOSS 直聘反爬检测"""
-        # 1. 检查 robots.txt
-        if not self._check_robots():
-            return False
-        
-        # 2. 检查频率限制
-        if not self._check_rate_limit():
-            return False
-        
-        # 3. 检测验证码
-        if self._detect_captcha():
-            logger.warning("[BOSS] Captcha detected, skip")
-            return False
-        
-        return True
-    
-    def close(self):
-        """v2: override 基类 close，额外清理 Playwright 资源"""
-        super().close()  # 先清理 httpx.Client（如有）
-        if self._browser is not None:
-            self._browser.close()
-            self._browser = None
-        if self._playwright is not None:
-            self._playwright.stop()
-            self._playwright = None
-```
-
-> **v2 Playwright 生命周期说明**：
-> - **browser**：适配器级别懒加载，整个采集周期复用一个 browser（启动成本高）
-> - **context + page**：每次 `fetch()` 创建独立 context，用完即关（`finally` 保证清理），避免 cookie/状态跨请求泄漏
-> - **close()**：在 `crawl_source()` 的 `finally` 块调用（见 §3.3），保证异常时也释放资源
-> - 验证码检测到时返回 False 跳过，**不尝试绕过**（合规底线）
+当前代码只保留明确返回空结果的合规骨架，配置永久默认关闭。低频、随机 UA、代理池、Playwright 拟人或验证码检测都不能把禁止的抓取变成合规。未来只有取得授权后才能另写授权适配器，并按授权范围、频率和保留期执行。
 
 ---
 
@@ -259,10 +178,10 @@ class BossAdapter(BaseAdapter):
 | 项目 | 说明 |
 |------|------|
 | 目标 URL | https://www.nowcoder.com/jobs/school/jobs |
-| 抓取方式 | httpx.Client（部分静态）+ Playwright（动态） |
-| 字段选择器 | CSS 选择器 |
-| 反爬应对 | 低频 + 随机 UA |
-| 合规评估 | robots.txt 部分限制；数据公开；**需评估 ToS** |
+| 抓取方式 | 当前不抓取，仅保留安全空实现 |
+| 字段选择器 | 不适用 |
+| 访问控制 | 不登录、不绕过、不模拟用户 |
+| 合规评估 | 完成条款与授权评估前保持禁用 |
 
 ---
 
@@ -945,20 +864,23 @@ def fetch_detail(self, url: str):
 
 | 规则 | 说明 |
 |------|------|
-| 仅采集公开页面 | 不登录、不绕过付费墙 |
+| 仅采集已审核公开来源 | “页面能打开”不等于允许自动收集 |
 | 不存储个人隐私 | HR 联系方式等不入库 |
 | 引用来源标注 | source_url 必填 |
-| 低频请求 | 每源每分钟 ≤1 次 |
-| 遵守 robots.txt | 抓取前检查 |
+| 固定声明身份 | 使用可配置、非伪装浏览器的固定 User-Agent |
+| 逐源限速 | 按来源约定和站点能力设置，不用统一频率掩盖未授权访问 |
+| 遵守 robots 与条款 | 两者都检查；任一无法确认时 fail closed |
 
 ### 7.4 合规风险评估表
 
 | 数据源 | 风险等级 | robots.txt | ToS | 对策 |
 |--------|---------|------------|-----|------|
-| 企业官网 | 低 ✅ | 通常允许 | 无明确禁止 | 正常采集 |
-| BOSS 直聘 | 高 ⚠️ | 有限制 | 禁止爬虫 | 低频少量 + 验证码检测 |
-| 牛客网 | 中 ⚠️ | 部分限制 | 需评估 | 低频 + 监控 |
-| 拉勾网 | 高 ⚠️ | 有限制 | 禁止爬虫 | 低频少量 |
+| 已审核企业官网/ATS | 逐源 | 逐源检查 | 逐源检查 | 注册、契约测试通过后开启 |
+| 政府/高校就业平台 | 逐源 | 逐源检查 | 逐源检查 | 优先做发现与核验，保留原文链接 |
+| 公众号公开文章 URL | 中 ⚠️ | 不等同普通网站 | 无全网开放采集承诺 | 已知 URL + 最小必要字段 + 人工复核 |
+| BOSS 直聘 | 高 ⚠️ | 非唯一依据 | 明确禁止未经许可抓取 | 禁用；只接受授权/API/合作 |
+| 猎聘 | 高 ⚠️ | 非唯一依据 | 明确禁止程序抓取 | 不建批量适配器；只接受授权/API/合作 |
+| 牛客等社区/平台 | 待评估 | 逐源检查 | 逐源检查 | 未完成评估前禁用 |
 
 ---
 
